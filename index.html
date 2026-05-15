@@ -1,0 +1,3471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KUBESTANUT • SS Komodor • Komodor SRE Game</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        * { box-sizing: border-box; }
+
+        body {
+            margin:0; padding:0;
+            background: radial-gradient(ellipse at center, #08082a 0%, #020210 100%);
+            color:#fff; font-family:'Press Start 2P', system-ui;
+            image-rendering:pixelated; overflow:hidden;
+        }
+        #game-container {
+            max-width:1280px; margin:0 auto;
+            border:6px solid #0066cc; background:#060e20;
+            box-shadow: 0 0 40px #0044aa, 0 0 80px #002266, inset 0 0 20px rgba(0,80,200,0.1);
+            position:relative;
+        }
+        header {
+            background: linear-gradient(180deg, #0a1a3a 0%, #060e20 100%);
+            padding:12px; font-size:20px; letter-spacing:3px;
+            border-bottom: 4px solid #0055bb;
+            display:flex; align-items:center; justify-content:space-between; position:relative;
+        }
+        header::after {
+            content:''; position:absolute;
+            bottom:-7px; left:0; right:0; height:3px;
+            background: linear-gradient(90deg, transparent, #0088ff, #8800ff, #0088ff, transparent);
+        }
+        .title { text-shadow: 0 0 10px #0088ff, 0 0 22px #0044aa; color:#55bbff; }
+        #canvas { display:block; background:#000; image-rendering:pixelated; }
+
+        /* Klaudia — always fixed top-right */
+        .klaudia-box {
+            position:fixed; top:16px; right:16px; width:150px;
+            background:#04080f; border:2px solid #0077cc; z-index:2500;
+            box-shadow: 0 0 16px rgba(0,100,255,0.45), 0 0 32px rgba(0,60,180,0.2);
+            overflow:hidden;
+        }
+        .klaudia-header {
+            display:flex; justify-content:space-between; align-items:center;
+            background: linear-gradient(90deg,#0a1a3a,#071230);
+            padding:3px 6px; font-size:7px; color:#55aadd;
+            border-bottom:1px solid #004488; cursor:pointer;
+        }
+        .klaudia-header span:last-child { color:#0099ff; font-size:12px; line-height:1; }
+        .klaudia-portrait {
+            width:100%; height:130px;
+            background-size:cover; background-position:center top;
+            display:block; image-rendering:pixelated;
+        }
+        .klaudia-body-inner { background:rgba(3,10,24,0.55); }
+        .speech-box {
+            padding:5px 6px 4px; min-height:34px; font-size:7px;
+            line-height:1.6; color:#88bbdd;
+            border-top:1px solid #004488;
+            background:rgba(3,10,24,0.4);
+        }
+        .modal {
+            position:fixed; top:0; left:0; width:100%; height:100%;
+            background:rgba(1,3,12,0.96);
+            display:none; align-items:center; justify-content:center; z-index:2000;
+        }
+        .modal-content {
+            background: linear-gradient(180deg,#0a1930 0%,#04080f 100%);
+            border:4px solid #0077cc; border-top:4px solid #0099ff;
+            width:90%; max-width:780px; padding:22px;
+            max-height:88vh; overflow-y:auto;
+            box-shadow: 0 0 60px rgba(0,80,220,0.5), inset 0 0 30px rgba(0,40,80,0.4);
+            position:relative;
+        }
+        .modal-content::before {
+            content:''; position:absolute; top:0; left:0; right:0; height:2px;
+            background: linear-gradient(90deg,transparent,#00aaff,#9900ff,#00aaff,transparent);
+        }
+        .log-line {
+            padding:6px 10px; margin:2px 0; background:#030a18;
+            cursor:pointer; font-size:10px; border-left:4px solid #0a1830;
+            font-family:monospace; color:#6699bb; transition:background 0.1s,color 0.1s;
+        }
+        .log-line:hover { background:#081525; color:#99bbdd; }
+        .log-line.suspicious { border-left-color:#cc6600; color:#dd9933; }
+        .log-line.suspicious:hover { background:#140a00; }
+        .cluster-row {
+            display:grid; grid-template-columns:1fr 120px 70px 90px;
+            align-items:center; padding:8px 10px; margin:2px 0;
+            background:#030a18; border-left:4px solid #0a1830; font-size:10px; color:#aaccee;
+        }
+        .cluster-row:hover { background:#05101e; }
+        button {
+            background: linear-gradient(180deg,#091e4a 0%,#050f28 100%);
+            color:#00bbff; border:2px solid #0055aa; border-bottom:3px solid #003377;
+            padding:8px 14px; font-family:'Press Start 2P',system-ui; font-size:9px;
+            cursor:pointer; margin:4px; text-transform:uppercase;
+            text-shadow:0 0 6px #0099ff;
+            box-shadow:0 3px 0 #002255,0 0 10px rgba(0,80,200,0.2);
+            transition:background 0.1s,box-shadow 0.1s;
+        }
+        button:hover {
+            background:linear-gradient(180deg,#1a3a6e 0%,#0d1f40 100%);
+            color:#fff; border-color:#0099ff;
+            box-shadow:0 3px 0 #002255,0 0 18px rgba(0,150,255,0.4);
+        }
+        button:active { transform:translateY(2px); box-shadow:0 1px 0 #002255; }
+        button:disabled { opacity:0.4; cursor:not-allowed; }
+        .fix-btn {
+            width:100%; padding:11px 10px; margin:5px 0; text-align:left;
+            font-size:8px; line-height:1.7; white-space:pre-wrap;
+            font-family:monospace; text-transform:none; letter-spacing:0;
+            text-shadow:none;
+        }
+        .fix-btn:hover { border-color:#00ccff; }
+        .fix-btn.klaudia-pick {
+            border-color:#ffcc00 !important;
+            box-shadow:0 0 20px #ffaa00,0 0 40px rgba(255,170,0,0.35),0 3px 0 #886600 !important;
+            color:#ffee55 !important; text-shadow:0 0 8px #ffcc00 !important;
+        }
+        .fix-btn.klaudia-dim { opacity:0.35; }
+        .status-bar {
+            position:absolute; top:18px; left:20px;
+            background:linear-gradient(180deg,#0a1930 0%,#04080f 100%);
+            border:3px solid #0055aa; padding:10px 12px; font-size:11px;
+            z-index:100; min-width:200px;
+            box-shadow:0 0 18px rgba(0,80,200,0.35); color:#55aadd;
+        }
+        @keyframes klaudiaArrowPulse {
+            0%, 100% { transform:translateX(0);   opacity:0.75; }
+            50%       { transform:translateX(7px); opacity:1;    }
+        }
+        @keyframes greenFlash {
+            0%   { background:#061a0a; box-shadow:0 0 18px #22cc66; border-left-color:#22cc66; }
+            60%  { background:#04120708; box-shadow:0 0 28px #44ff88; }
+            100% { box-shadow:none; }
+        }
+        #klaudia-hint-arrow {
+            display:none; position:fixed; right:174px; top:228px;
+            z-index:3000; pointer-events:none;
+            animation: klaudiaArrowPulse 0.7s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+<div id="game-container">
+    <header>
+        <div class="title">SS KOMODOR • DECK 1</div>
+        <div id="timer" style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;color:#ffcc00;text-shadow:0 0 10px #ffaa00;white-space:nowrap;">TIME: 00:00</div>
+        <div style="min-width:175px;"></div>
+    </header>
+    <div style="position:relative;">
+        <canvas id="canvas" width="1150" height="650"></canvas>
+        <div id="phase-status" style="display:none;"><strong id="phase-label"></strong></div>
+    </div>
+</div>
+
+<!-- Klaudia — fixed, always visible -->
+<div class="klaudia-box" id="klaudia-box">
+    <div class="klaudia-header" onclick="toggleKlaudiaBox()">
+        <span>▸ KLAUDIA // AI ENGINEER</span>
+        <span id="klaudia-toggle">−</span>
+    </div>
+    <div id="klaudia-body">
+        <div class="klaudia-portrait" id="klaudia-face"></div>
+        <div class="klaudia-body-inner">
+            <div class="speech-box" id="klaudia-speech">
+                Something is wrong aboard the SS Komodor. Find it.
+            </div>
+            <button id="klaudia-ask-btn" onclick="askKlaudiaDirectly()" style="width:calc(100% - 6px);margin:3px;font-size:7px;padding:5px 6px;">ASK KLAUDIA</button>
+        </div>
+    </div>
+</div>
+
+<!-- Klaudia hint arrow — second playthrough nudge -->
+<div id="klaudia-hint-arrow">
+    <div style="
+        background:#170e00; border:2px solid #ffaa00; border-right:none;
+        padding:5px 10px; font-family:'Press Start 2P',system-ui;
+        font-size:7px; color:#ffee88; text-shadow:0 0 8px #ffaa00;
+        white-space:nowrap; line-height:1.8;
+        box-shadow:0 0 14px rgba(255,170,0,0.5);
+        position:relative;
+    ">
+        USE<br>KLAUDIA!
+        <div style="
+            position:absolute; right:-12px; top:50%; transform:translateY(-50%);
+            width:0; height:0;
+            border-top:10px solid transparent;
+            border-bottom:10px solid transparent;
+            border-left:12px solid #ffaa00;
+        "></div>
+    </div>
+</div>
+
+<!-- Cluster / Log Modal -->
+<div class="modal" id="log-modal">
+    <div class="modal-content">
+        <h2 style="color:#00ccff;text-align:center;text-shadow:0 0 15px #0077ff;font-size:14px;margin-bottom:2px;">KOMODOR • SS KOMODOR CLUSTER</h2>
+        <div style="text-align:center;color:#223344;font-size:9px;margin-bottom:12px;">NAMESPACE: ss-komodor-prod | CONTEXT: vanguard-k8s-01</div>
+        <div id="log-container"></div>
+        <div style="text-align:center;margin-top:14px;">
+            <button onclick="submitRCA()" id="rca-submit-btn" disabled>→ CONFIRM RCA</button>
+            <button onclick="closeModal()">CLOSE</button>
+        </div>
+    </div>
+</div>
+
+<!-- Interaction Modal -->
+<div class="modal" id="interaction-modal">
+    <div class="modal-content">
+        <h2 id="modal-title" style="color:#00ccff;font-size:13px;margin-bottom:14px;"></h2>
+        <div id="modal-body"></div>
+        <button onclick="closeModal()" style="margin-top:16px;">CLOSE</button>
+    </div>
+</div>
+
+<!-- Win Modal -->
+<!-- Klaudia impact comparison popup -->
+<div class="modal" id="comparison-modal" style="display:none;">
+    <div class="modal-content" style="text-align:center;max-width:420px;">
+        <div style="font-size:9px;color:#44ff88;letter-spacing:3px;margin-bottom:10px;text-shadow:0 0 12px #00ff66;">▸ KLAUDIA IMPACT REPORT</div>
+        <div id="comparison-content" style="margin-bottom:18px;"></div>
+        <button onclick="showWinModal()" style="padding:12px 32px;
+            background:linear-gradient(180deg,#1a3300 0%,#0a1800 100%);
+            color:#66ff44;border-color:#339900;font-size:10px;">
+            CONTINUE →
+        </button>
+    </div>
+</div>
+
+<div class="modal" id="win-modal" style="display:none;">
+    <div class="modal-content" style="text-align:center;">
+        <div style="font-size:10px;color:#00ffcc;text-shadow:0 0 16px #00ffaa;margin-bottom:6px;letter-spacing:3px;">▸ INCIDENT RESOLVED</div>
+        <h2 style="color:#ffffff;font-size:18px;margin:0 0 8px;text-shadow:0 0 15px #aaffcc;">CONGRATS CAPTAIN!</h2>
+        <p style="color:#aaccee;font-size:13px;font-weight:bold;line-height:2;margin:8px 0 14px;">
+            Klaudia isn't just the SS Komodor's AI,<br>
+            she is a real AI SRE, developed by Komodor that works within<br>
+            your Kubernetes estate just like how she<br>
+            did in the game. If you want to learn more Check us out 
+            and book a demo with our team.
+        </p>
+        <button onclick="bookDemo()" style="width:82%;padding:14px;margin:4px auto 14px;display:block;
+            background:linear-gradient(180deg,#007733 0%,#004422 100%);
+            color:#00ff88;border-color:#00aa44;font-size:11px;
+            box-shadow:0 0 22px rgba(0,200,100,0.45),0 4px 0 #002211;">
+            BOOK A DEMO WITH KOMODOR →
+        </button>
+        <p id="win-time" style="font-size:13px;color:#ffcc00;text-shadow:0 0 10px #ffaa00;margin:0 0 6px;"></p>
+        <div id="win-comparison" style="margin-bottom:10px;"></div>
+        <div id="save-section">
+            <div style="text-align:left;width:90%;margin:0 auto 10px;
+                border:1px solid #003366;background:#020810;padding:14px 16px;">
+                <div style="font-size:7px;color:#336688;letter-spacing:2px;margin-bottom:12px;text-align:center;">
+                    ▸ SAVE YOUR SCORE
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <div>
+                        <div style="font-size:6px;color:#446688;letter-spacing:1px;margin-bottom:4px;">FULL NAME <span style="color:#ff4422;">*</span></div>
+                        <input id="pii-fullname" type="text" placeholder="Your full name"
+                            style="width:100%;padding:8px 10px;background:#030c1a;color:#aaccee;
+                            border:2px solid #0044aa;font-family:'Press Start 2P',system-ui;font-size:8px;outline:none;">
+                    </div>
+                    <div>
+                        <div style="font-size:6px;color:#446688;letter-spacing:1px;margin-bottom:4px;">EMAIL <span style="color:#ff4422;">*</span></div>
+                        <input id="pii-email" type="email" placeholder="your@email.com"
+                            style="width:100%;padding:8px 10px;background:#030c1a;color:#aaccee;
+                            border:2px solid #0044aa;font-family:'Press Start 2P',system-ui;font-size:8px;outline:none;">
+                    </div>
+                    <div>
+                        <div style="font-size:6px;color:#446688;letter-spacing:1px;margin-bottom:4px;">PHONE <span style="color:#334455;font-size:5px;">(OPTIONAL)</span></div>
+                        <input id="pii-phone" type="tel" placeholder="+1 555 000 0000"
+                            style="width:100%;padding:8px 10px;background:#030c1a;color:#aaccee;
+                            border:2px solid #0044aa;font-family:'Press Start 2P',system-ui;font-size:8px;outline:none;">
+                    </div>
+                    <div>
+                        <div style="font-size:6px;color:#446688;letter-spacing:1px;margin-bottom:4px;">LEADERBOARD CALLSIGN <span style="color:#ff4422;">*</span> <span style="color:#334455;font-size:5px;">(12 CHARS MAX)</span></div>
+                        <input id="player-name-input" type="text" placeholder="CALLSIGN" maxlength="12"
+                            style="width:100%;padding:8px 10px;background:#030c1a;color:#00ccff;
+                            border:2px solid #0055aa;font-family:'Press Start 2P',system-ui;font-size:8px;outline:none;text-transform:uppercase;">
+                    </div>
+                </div>
+                <div id="save-error" style="display:none;color:#ff4422;font-size:6px;margin-top:8px;text-align:center;letter-spacing:1px;"></div>
+            </div>
+            <button onclick="saveScoreAndShowLeaderboard()" style="margin-top:4px;width:90%;padding:12px;">
+                SAVE SCORE + LEADERBOARD →
+            </button>
+        </div>
+        <div id="leaderboard" style="display:none;text-align:left;max-height:260px;overflow-y:auto;"></div>
+        <button onclick="playAgain()" style="margin-top:10px;">PLAY AGAIN</button>
+    </div>
+</div>
+
+<!-- Second-run Klaudia online popup -->
+<div id="klaudia-second-run-modal" style="display:none;position:fixed;inset:0;z-index:3100;
+    background:rgba(1,3,12,0.96);align-items:center;justify-content:center;flex-direction:column;
+    font-family:'Press Start 2P',system-ui;text-align:center;padding:30px;">
+    <div style="border:4px solid #00ff88;border-top:4px solid #00ffcc;
+        background:linear-gradient(180deg,#041a0c 0%,#020a05 100%);
+        padding:36px 40px;max-width:580px;width:100%;
+        box-shadow:0 0 60px rgba(0,255,100,0.35),inset 0 0 30px rgba(0,80,30,0.3);
+        position:relative;">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;
+            background:linear-gradient(90deg,transparent,#00ff88,#00ffcc,#00ff88,transparent);"></div>
+        <div style="font-size:9px;color:#00ff88;letter-spacing:3px;margin-bottom:12px;">▸ SYSTEM ONLINE</div>
+        <h2 style="color:#ffffff;font-size:14px;margin:0 0 18px;text-shadow:0 0 15px #00ff88;line-height:1.8;">
+            KLAUDIA IS ONLINE
+        </h2>
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:20px;">
+            <img src="https://i.imgur.com/bPGngvn.png" style="width:56px;height:56px;object-fit:cover;object-position:top;border:2px solid #00ff88;image-rendering:pixelated;">
+            <div style="font-size:8px;color:#88ddaa;text-align:left;line-height:2.2;">
+                KLAUDIA<br>
+                <span style="color:#00ff88;">// AI ENGINEER</span><br>
+                <span style="color:#22aa55;font-size:7px;">● ACTIVE</span>
+            </div>
+        </div>
+        <p style="color:#88bbdd;font-size:8px;line-height:2.4;margin:0 0 22px;">
+            Now the ship's AI, Klaudia, is online.<br>
+            Let's see if she can help you move faster.<br><br>
+            <span style="color:#446688;font-size:7px;">YOUR FIRST RUN: <span id="second-run-prev-time" style="color:#ff7744;font-size:9px;"></span></span>
+        </p>
+        <button onclick="dismissSecondRunPopup()" style="width:80%;padding:13px;
+            background:linear-gradient(180deg,#041e0c 0%,#020a05 100%);
+            color:#00ff88;border:2px solid #00aa44;font-size:9px;">
+            LET'S GO →
+        </button>
+    </div>
+</div>
+
+<!-- No-Klaudia taunt overlay -->
+<div id="no-klaudia-overlay" style="
+    display:none; position:fixed; inset:0; z-index:3000;
+    background:rgba(1,3,12,0.93);
+    align-items:center; justify-content:center; flex-direction:column;
+    font-family:'Press Start 2P',system-ui; text-align:center; padding:30px;">
+    <div style="
+        border:4px solid #0077cc; border-top:4px solid #00ccff;
+        background:linear-gradient(180deg,#0a1930 0%,#04080f 100%);
+        padding:36px 40px; max-width:580px;
+        box-shadow:0 0 60px rgba(0,100,255,0.5),inset 0 0 30px rgba(0,40,80,0.4);
+        position:relative;">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;
+            background:linear-gradient(90deg,transparent,#00aaff,#9900ff,#00aaff,transparent);"></div>
+        <div style="font-size:9px;color:#00ffcc;letter-spacing:3px;margin-bottom:10px;">▸ MISSION COMPLETE</div>
+        <h2 style="color:#ffffff;font-size:16px;margin:0 0 18px;text-shadow:0 0 15px #aaffcc;line-height:1.6;">
+            GOOD JOB, CAPTAIN!
+        </h2>
+        <p style="color:#88bbdd;font-size:8px;line-height:2.2;margin:0 0 24px;">
+            You completed the mission without<br>
+            using the ship AI on board.<br><br>
+            Now try it with Klaudia and see<br>
+            if she helps your time at all!
+        </p>
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:20px;">
+            <img src="https://i.imgur.com/bPGngvn.png" style="width:56px;height:56px;object-fit:cover;object-position:top;border:2px solid #0077cc;image-rendering:pixelated;">
+            <div style="font-size:8px;color:#55aadd;text-align:left;line-height:2;">
+                KLAUDIA<br>
+                <span style="color:#00bbff;">// AI ENGINEER</span><br>
+                <span style="color:#446688;font-size:7px;">standing by...</span>
+            </div>
+        </div>
+        <div id="no-klaudia-countdown" style="font-size:8px;color:#446688;margin-bottom:14px;">
+            restarting in <span id="nk-secs">5</span>s...
+        </div>
+        <button onclick="dismissNoKlaudia()" style="width:80%;padding:13px;
+            background:linear-gradient(180deg,#091e4a 0%,#050f28 100%);
+            color:#00bbff;border:2px solid #0055aa;font-size:9px;">
+            LET'S GO AGAIN →
+        </button>
+    </div>
+</div>
+
+<script>
+const CANVAS = document.getElementById('canvas');
+const CTX    = CANVAS.getContext('2d');
+
+const ALL_INCIDENT_TYPES = ['nav','engines','fuel-a','fuel-b','landing'];
+const SYSTEM_NAMES = {
+    nav:      'NAV COMPUTER',
+    engines:  'ENGINE BAY',
+    'fuel-a': 'FUEL BAY A',
+    'fuel-b': 'FUEL BAY B',
+    landing:  'LANDING CTRL'
+};
+
+const TAG_MAP = { nav:'nav', engines:'eng', 'fuel-a':'fuelA', 'fuel-b':'fuelB', landing:'land' };
+
+const SCENARIOS = [
+    {
+        id: 'oomkill',
+        header: 'EXIT 137 • OOMKILL',
+        headerColor: '#ff55aa',
+        suspiciousTest: line => line.includes('OOMKill') || line.includes('CrashLoopBackOff') || line.includes('137'),
+        getFixOptions: d => [
+            { correct:true,  label:`kubectl set resources deploy/${d} --limits=memory=2Gi`,      sub:`kubectl rollout restart deploy/${d}` },
+            { correct:false, label:`kubectl set resources deploy/${d} --requests=memory=2Gi`,    sub:`kubectl rollout restart deploy/${d}` },
+            { correct:false, label:`kubectl set resources deploy/${d} --limits=memory=2Gi`,      sub:`kubectl rollout undo deploy/${d}` },
+            { correct:false, label:`kubectl set resources deploy/${d} --limits=memory=1Gi`,      sub:`kubectl rollout restart deploy/${d}` },
+        ],
+        klaudiaRCA:          "<span style='color:#ff88aa;letter-spacing:2px;font-size:7px;'>▸ ANALYSIS COMPLETE — EXIT 137 / OOMKILL</span><hr style='border:none;border-top:1px solid #332200;margin:5px 0;'><b style='color:#ff9900;letter-spacing:1px;'>⏱ TIMELINE</b><br><span style='color:#665533;'>13:04:20Z</span> — Memory usage spike detected (94% of 1Gi limit)<br><span style='color:#665533;'>13:05:21Z</span> — OOMKill triggered — exit 137, container hard-killed<br><span style='color:#665533;'>13:05:33Z</span> — CrashLoopBackOff initiated (restart #4, backoff 40s)<br><span style='color:#665533;'>13:05:40Z</span> — OOMKill again — pod unable to stabilise<hr style='border:none;border-top:1px solid #332200;margin:5px 0;'><b style='color:#ff9900;letter-spacing:1px;'>🔍 EVIDENCE</b><br><span style='font-family:monospace;color:#ff6644;font-size:7px;'>ERROR OOMKilled — container memory limit exceeded</span><br><span style='font-family:monospace;color:#ff6644;font-size:7px;'>WARN  CrashLoopBackOff — restarts: 4, backoff 40s</span><br><span style='font-family:monospace;color:#ff6644;font-size:7px;'>CRIT  Exit code 137 — kernel-issued SIGKILL</span><hr style='border:none;border-top:1px solid #332200;margin:5px 0;'><b style='color:#ff9900;letter-spacing:1px;'>🔄 RELATED CHANGES</b><br><span style='color:#887744;'>Running image:</span> <span style='color:#ffdd66;'>komodor/kubestanut:v2.4.1</span><br><span style='color:#887744;'>Memory limit (current):</span> <span style='color:#ff6644;'>1Gi</span> &nbsp;→&nbsp; <span style='color:#66ff88;'>fix: 2Gi</span><br><span style='color:#887744;'>Rollback option:</span> kubectl set resources --limits=memory=2Gi<hr style='border:none;border-top:1px solid #332200;margin:5px 0;'><div onclick='klaudiaApplyRemediation()' style='cursor:pointer;background:#030a03;border:1px solid #225522;padding:8px 10px;margin-top:2px;' onmouseover=\"this.style.background='#071407'\" onmouseout=\"this.style.background='#030a03'\"><b style='color:#ff9900;letter-spacing:1px;'>🛠 REMEDIATION</b> <span style='color:#336633;font-size:6px;letter-spacing:1px;'>▶ CLICK TO APPLY</span><br><span style='font-family:monospace;color:#88ff88;font-size:7px;'>kubectl set resources deploy/[name] --limits=memory=2Gi</span><br><span style='font-family:monospace;color:#88ff88;font-size:7px;'>kubectl rollout restart deploy/[name]</span></div>",
+        klaudiaClean:        "<span style='color:#44ffaa;letter-spacing:1px;'>▸ SCAN COMPLETE</span><br><br>No OOMKill events detected. This system is running within memory limits. Keep checking the other pods.",
+        klaudiaTroubleshoot: "I've highlighted the correct fix. OOMKill = memory LIMIT exceeded. Raise --limits (the hard cap, not --requests). Use rollout restart to apply it — undo would revert your change.",
+    },
+    {
+        id: 'imagepull',
+        header: 'IMAGEPULLBACKOFF • ERR_IMAGE',
+        headerColor: '#ff9900',
+        suspiciousTest: line => line.includes('ImagePullBackOff') || line.includes('ErrImagePull') || line.includes('Failed to pull'),
+        incidentTail: (tag, sysId) => {
+            const img = `komodor/kubestanut-${sysId}`;
+            return [
+                
+                `2026-04-30T12:55:02Z INFO  [${tag}] Pulling image ${img}:v2.4.2-rc1`,
+                `2026-04-30T12:55:05Z WARN  [${tag}] Retrying pull for ${img}:v2.4.2-rc1 (attempt 2/3)`,
+                `2026-04-30T12:55:09Z ERROR [${tag}] Failed to pull image "${img}:v2.4.2-rc1": not found in registry`,
+                `2026-04-30T12:55:09Z ERROR [${tag}] ErrImagePull — rpc error: code = NotFound desc = manifest unknown`,
+                `2026-04-30T12:55:14Z WARN  [${tag}] Back-off pulling image "${img}:v2.4.2-rc1"`,
+                `2026-04-30T12:55:22Z ERROR [${tag}] ImagePullBackOff — pod stuck in Waiting state`,
+                `2026-04-30T12:55:35Z ERROR [${tag}] ImagePullBackOff — retries exhausted (5/5)`,
+                `2026-04-30T12:55:41Z CRIT  [${tag}] Pod cannot start — image unavailable`,
+            ];
+        },
+        getFixOptions: d => [
+            { correct:true,  label:`kubectl set image deploy/${d} ${d}=komodor/${d}:v2.4.1`,      sub:`kubectl rollout restart deploy/${d}` },
+            { correct:false, label:`kubectl set image deploy/${d} ${d}=komodor/${d}:latest`,       sub:`kubectl rollout restart deploy/${d}` },
+            { correct:false, label:`kubectl set image deploy/${d} ${d}=komodor/${d}:v2.4.1`,      sub:`kubectl rollout undo deploy/${d}` },
+            { correct:false, label:`kubectl set image deploy/${d} ${d}=komodor/${d}:v2.4.2-rc1`,  sub:`kubectl rollout restart deploy/${d}` },
+        ],
+        klaudiaRCA:          "<span style='color:#ff88aa;letter-spacing:2px;font-size:7px;'>▸ ANALYSIS COMPLETE — IMAGEPULLBACKOFF</span><hr style='border:none;border-top:1px solid #332200;margin:5px 0;'><b style='color:#ff9900;letter-spacing:1px;'>⏱ TIMELINE</b><br><span style='color:#665533;'>12:54:50Z</span> — CD pipeline pushed deploy update → image tag v2.4.2-rc1<br><span style='color:#665533;'>12:55:02Z</span> — Registry pull initiated for v2.4.2-rc1<br><span style='color:#665533;'>12:55:09Z</span> — Pull failed: manifest unknown — tag not in registry<br><span style='color:#665533;'>12:55:35Z</span> — ImagePullBackOff — retries exhausted (5/5), pod Waiting<hr style='border:none;border-top:1px solid #332200;margin:5px 0;'><b style='color:#ff9900;letter-spacing:1px;'>🔍 EVIDENCE</b><br><span style='font-family:monospace;color:#ff6644;font-size:7px;'>ERROR Failed to pull image \"v2.4.2-rc1\": not found in registry</span><br><span style='font-family:monospace;color:#ff6644;font-size:7px;'>ERROR ErrImagePull — rpc error: code = NotFound, manifest unknown</span><br><span style='font-family:monospace;color:#ff6644;font-size:7px;'>ERROR ImagePullBackOff — retries exhausted (5/5)</span><hr style='border:none;border-top:1px solid #332200;margin:5px 0;'><b style='color:#ff9900;letter-spacing:1px;'>🔄 RELATED CHANGES</b><br><span style='color:#887744;'>Current image tag:</span> <span style='color:#ff6644;'>v2.4.2-rc1</span> &nbsp;(not in registry)<br><span style='color:#887744;'>Rollback image tag:</span> <span style='color:#66ff88;'>v2.4.1</span> &nbsp;(last known-good)<br><span style='color:#887744;'>Deployed by:</span> cd-pipeline @ 12:54:50Z — image was never pushed<hr style='border:none;border-top:1px solid #332200;margin:5px 0;'><div onclick='klaudiaApplyRemediation()' style='cursor:pointer;background:#030a03;border:1px solid #225522;padding:8px 10px;margin-top:2px;' onmouseover=\"this.style.background='#071407'\" onmouseout=\"this.style.background='#030a03'\"><b style='color:#ff9900;letter-spacing:1px;'>🛠 REMEDIATION</b> <span style='color:#336633;font-size:6px;letter-spacing:1px;'>▶ CLICK TO APPLY</span><br><span style='font-family:monospace;color:#88ff88;font-size:7px;'>kubectl set image deploy/[name] [name]=komodor/[name]:v2.4.1</span><br><span style='font-family:monospace;color:#88ff88;font-size:7px;'>kubectl rollout restart deploy/[name]</span></div>",
+        klaudiaClean:        "<span style='color:#44ffaa;letter-spacing:1px;'>▸ SCAN COMPLETE</span><br><br>No image pull failures here. This pod is healthy and its image tag resolves correctly. Keep checking the other systems.",
+        klaudiaTroubleshoot: "I've highlighted the correct fix. Pin the image back to v2.4.1 — the last known-good tag. Don't use :latest (unpredictable) and avoid rollout undo — that would re-deploy the broken tag.",
+    },
+    {
+        id: 'cputhrottle',
+        header: 'FAILEDSCHEDULING • CPU STARVED',
+        headerColor: '#ffaa00',
+        suspiciousTest: line => line.includes('Insufficient cpu') || line.includes('FailedScheduling') || line.includes('CPU throttl') || line.includes('Pending —'),
+        incidentTail: (tag) => [
+            `2026-04-30T13:03:00Z WARN  [${tag}] CPU throttling: 780% — requests exceed node capacity`,
+            `2026-04-30T13:03:30Z WARN  [${tag}] CPU throttling: 920% — service latency degraded`,
+            `2026-04-30T13:04:00Z ERROR [${tag}] FailedScheduling: Insufficient cpu, 3 node(s) had too few free cpus`,
+            `2026-04-30T13:04:15Z ERROR [${tag}] Request timeout: CPU starved (all cores throttled)`,
+            `2026-04-30T13:04:40Z CRIT  [${tag}] Pod evicted — CPU requests (2000m) exceed node allocatable`,
+            `2026-04-30T13:04:55Z ERROR [${tag}] FailedScheduling: 0/3 nodes available: Insufficient cpu`,
+            `2026-04-30T13:05:10Z CRIT  [${tag}] Pod Pending — no schedulable nodes found`,
+            `2026-04-30T13:05:20Z ERROR [${tag}] FailedScheduling: cpu requests too high (2000m requested, 500m available)`,
+        ],
+        getFixOptions: d => [
+            { correct:true,  label:`kubectl set resources deploy/${d} --requests=cpu=250m --limits=cpu=500m`,    sub:`kubectl rollout restart deploy/${d}` },
+            { correct:false, label:`kubectl set resources deploy/${d} --requests=cpu=2000m --limits=cpu=2000m`,  sub:`kubectl rollout restart deploy/${d}` },
+            { correct:false, label:`kubectl set resources deploy/${d} --requests=cpu=250m --limits=cpu=500m`,    sub:`kubectl rollout undo deploy/${d}` },
+            { correct:false, label:`kubectl set resources deploy/${d} --limits=cpu=500m`,                        sub:`kubectl rollout restart deploy/${d}` },
+        ],
+        klaudiaRCA:          "<span style='color:#ff88aa;letter-spacing:2px;font-size:7px;'>▸ ANALYSIS COMPLETE — FAILEDSCHEDULING / CPU STARVED</span><hr style='border:none;border-top:1px solid #332200;margin:5px 0;'><b style='color:#ff9900;letter-spacing:1px;'>⏱ TIMELINE</b><br><span style='color:#665533;'>13:02:45Z</span> — Resource quota updated: CPU requests raised to 2000m<br><span style='color:#665533;'>13:03:00Z</span> — CPU throttling detected — requests exceed node capacity<br><span style='color:#665533;'>13:04:00Z</span> — FailedScheduling: 0/3 nodes available, Insufficient cpu<br><span style='color:#665533;'>13:05:10Z</span> — Pod stuck Pending indefinitely — unschedulable<hr style='border:none;border-top:1px solid #332200;margin:5px 0;'><b style='color:#ff9900;letter-spacing:1px;'>🔍 EVIDENCE</b><br><span style='font-family:monospace;color:#ff6644;font-size:7px;'>WARN  CPU throttling: 920% — service latency degraded</span><br><span style='font-family:monospace;color:#ff6644;font-size:7px;'>ERROR FailedScheduling: Insufficient cpu, 3 node(s)</span><br><span style='font-family:monospace;color:#ff6644;font-size:7px;'>CRIT  Pod Pending — no schedulable nodes found</span><hr style='border:none;border-top:1px solid #332200;margin:5px 0;'><b style='color:#ff9900;letter-spacing:1px;'>🔄 RELATED CHANGES</b><br><span style='color:#887744;'>CPU requests (current):</span> <span style='color:#ff6644;'>2000m</span> &nbsp;→&nbsp; <span style='color:#66ff88;'>fix: 250m</span><br><span style='color:#887744;'>CPU limits (current):</span> <span style='color:#ff6644;'>2000m</span> &nbsp;→&nbsp; <span style='color:#66ff88;'>fix: 500m</span><br><span style='color:#887744;'>Node allocatable CPU:</span> 500m (requests exceeded by 4×)<hr style='border:none;border-top:1px solid #332200;margin:5px 0;'><div onclick='klaudiaApplyRemediation()' style='cursor:pointer;background:#030a03;border:1px solid #225522;padding:8px 10px;margin-top:2px;' onmouseover=\"this.style.background='#071407'\" onmouseout=\"this.style.background='#030a03'\"><b style='color:#ff9900;letter-spacing:1px;'>🛠 REMEDIATION</b> <span style='color:#336633;font-size:6px;letter-spacing:1px;'>▶ CLICK TO APPLY</span><br><span style='font-family:monospace;color:#88ff88;font-size:7px;'>kubectl set resources deploy/[name] --requests=cpu=250m --limits=cpu=500m</span><br><span style='font-family:monospace;color:#88ff88;font-size:7px;'>kubectl rollout restart deploy/[name]</span></div>",
+        klaudiaClean:        "<span style='color:#44ffaa;letter-spacing:1px;'>▸ SCAN COMPLETE</span><br><br>No scheduling failures detected. CPU usage is nominal and this pod is running fine. Keep checking the other pods.",
+        klaudiaTroubleshoot: "I've highlighted the correct fix. Reduce --requests to 250m (what the pod actually needs) and --limits to 500m. Without fixing requests the pod stays unschedulable. Rollout undo would restore the oversized config.",
+
+    },
+];
+
+let GAME_STATE = {
+    phase: 'rca',
+    incidentType: ALL_INCIDENT_TYPES[Math.floor(Math.random() * ALL_INCIDENT_TYPES.length)],
+    scenarioId: SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)].id,
+    totalTimeStart: Date.now(),
+    klaudiaEnabled: false,
+    klaudiaUsed: false,
+    klaudiaActive: false,
+    shuffledOptions: null,
+    currentLogSystem: null,
+    easterEggsFound: 0,
+    powerAlloc: null
+};
+
+// ── Star field ────────────────────────────────────────────────────
+const STARS = Array.from({length:160}, () => ({
+    x: Math.random()*1150, y: Math.random()*650,
+    size: Math.random() < 0.07 ? 2 : 1,
+    brightness: 0.15 + Math.random()*0.65,
+    twinkle: Math.random()*Math.PI*2
+}));
+
+// ── Hotspots ──────────────────────────────────────────────────────
+const HOTSPOTS = [
+    { id:'main-computer', name:'MAIN COMPUTER', x:460, y:65,  w:230, h:130, fill:'#0d2540', border:'#00ccff', glow:'#0088aa' },
+    { id:'nav',           name:'NAV COMPUTER',  x:460, y:255, w:230, h:130, fill:'#0a1e32', border:'#00ccff', glow:'#0088aa' },
+    { id:'engines',       name:'ENGINE BAY',    x:440, y:450, w:270, h:150, fill:'#2a0e04', border:'#ff6600', glow:'#882200' },
+    { id:'fuel-a',        name:'FUEL BAY A',    x:65,  y:185, w:160, h:160, fill:'#0c1e18', border:'#00ccff', glow:'#008877' },
+    { id:'fuel-b',        name:'FUEL BAY B',    x:875, y:185, w:160, h:160, fill:'#0c1e18', border:'#00ccff', glow:'#008877' },
+    { id:'landing',       name:'LANDING CTRL',  x:875, y:455, w:160, h:130, fill:'#16161e', border:'#ffcc00', glow:'#887700' },
+    { id:'elevator',      name:'ELEVATOR',      x:875, y:348, w:160, h:105, fill:'#111827', border:'#556677', glow:'#334455', decorative:true },
+    { id:'power-gen',     name:'POWER GENERATOR', x:75,  y:350, w:280, h:235, fill:'#0d0d0d', border:'#ff6600', glow:'#882200' },
+    { id:'sleeping-a',    name:'SLEEPING QTR A',x:720, y:75,  w:278, h:110, fill:'#0d1a28', border:'#3366cc', glow:'#112244', decorative:true },
+    { id:'commodore-qtr', name:"COMMODORE'S QTR", x:162, y:82,  w:260, h:100, fill:'#0d1f2e', border:'#ffaa00', glow:'#664400', decorative:true }
+];
+
+// ── Power distribution puzzle targets ────────────────────────────
+const POWER_TARGETS = [
+    { name:'FUEL PUMP A',  cpu:30, mem:35 },
+    { name:'FUEL PUMP B',  cpu:30, mem:35 },
+    { name:'ENGINES',      cpu:55, mem:65 },
+    { name:'NAV COMPUTER', cpu:40, mem:50 },
+    { name:'LIFE SUPPORT', cpu:45, mem:40 },
+];
+
+let SPARKS = [];
+let instructionsActive = false;
+
+const WALLS = [
+    // ── Outer hull bounds ─────────────────────────────────────────
+    {x:40, y:40,  w:1070, h:18},   // top
+    {x:40, y:40,  w:18,   h:570},  // left
+    {x:1028,y:40, w:8,    h:580},  // right
+    {x:40, y:590, w:1070, h:18},   // bottom
+
+    // ── Center room column (main-computer + nav): solid sides, open corridor gaps ──
+    // Left wall of center column — split to leave a 60px corridor gap at y:195-255 and y:385-450
+    {x:454,y:65,  w:8, h:130},  // main-comp left top
+    {x:454,y:255, w:8, h:130},  // nav left
+    {x:434,y:450, w:8, h:155},  // engines left
+    // Right wall of center column
+    {x:688,y:65,  w:8, h:130},  // main-comp right top
+    {x:688,y:255, w:8, h:130},  // nav right
+    {x:708,y:450, w:8, h:155},  // engines right
+
+    // ── Side rooms: solid walls with a doorway gap ─────────────────
+    // Fuel-a right wall (gap at y:240-300 = doorway)
+    {x:220,y:185, w:8, h:55},   // fuel-a door top
+    {x:220,y:300, w:8, h:45},   // fuel-a door bottom
+    // Fuel-b left wall (gap at y:240-300 = doorway)
+    {x:872,y:185, w:8, h:55},
+    {x:872,y:300, w:8, h:45},
+    // Landing left wall (gap at y:490-540 = doorway)
+    {x:872,y:455, w:8, h:35},
+    {x:872,y:540, w:8, h:45},
+];
+
+// ── Tripled logs ──────────────────────────────────────────────────
+const SYSTEM_LOGS = {
+    nav: {
+        pod: 'kubestanut-nav-7f3a1b',
+        normal: [
+            "2026-04-30T12:55:02Z INFO  [nav] Pulling image komodor/kubestanut-nav:v2.4.1",
+            "2026-04-30T12:55:04Z INFO  [nav] Successfully pulled image in 1.923s",
+            "2026-04-30T12:55:04Z INFO  [nav] Created container nav-computer",
+            "2026-04-30T12:55:05Z INFO  [nav] Started container nav-computer",
+            "2026-04-30T12:55:10Z INFO  [nav] Liveness probe: HTTP 200 OK (38ms)",
+            "2026-04-30T12:55:15Z INFO  [nav] Readiness probe: HTTP 200 OK — pod READY",
+            "2026-04-30T12:55:20Z INFO  [nav] NAV ONLINE: gyroscope calibration complete",
+            "2026-04-30T12:55:25Z INFO  [nav] Star chart sync: sector 7G loaded (2847 stars)",
+            "2026-04-30T12:55:30Z INFO  [nav] Autopilot v3.2 initialized — heading 042.7°",
+            "2026-04-30T12:58:00Z INFO  [nav] Scheduled reconciliation loop: OK",
+            "2026-04-30T13:00:00Z INFO  [nav] Heartbeat OK — memory 421Mi/1024Mi (41%)",
+            "2026-04-30T13:01:00Z INFO  [nav] Star chart background refresh: 847 entries updated",
+            "2026-04-30T13:01:30Z WARN  [nav] Disk space: /var/log at 84% capacity — consider rotation",
+            "2026-04-30T13:02:00Z INFO  [nav] Memory 418Mi/1024Mi (40%) — stable",
+            "2026-04-30T13:02:30Z WARN  [nav] Liveness probe slow: 891ms (threshold 1000ms)",
+            "2026-04-30T13:03:00Z INFO  [nav] Liveness probe normalized: 203ms",
+            "2026-04-30T13:03:30Z INFO  [nav] CPU: 188m/500m (37%) — nominal",
+            "2026-04-30T13:04:00Z INFO  [nav] Readiness probe: HTTP 200 OK",
+            "2026-04-30T13:04:30Z WARN  [nav] Log buffer at 79% — flush scheduled",
+            "2026-04-30T13:05:00Z INFO  [nav] Heartbeat OK — memory 424Mi/1024Mi (41%)",
+            "2026-04-30T13:05:15Z INFO  [nav] Reconciliation complete — 0 drift events",
+            "2026-04-30T13:05:30Z INFO  [nav] Liveness probe: HTTP 200 OK (41ms)",
+            "2026-04-30T13:05:45Z INFO  [nav] Navigation online — course plotted successfully",
+        ],
+        incident: [
+            "2026-04-30T12:55:02Z INFO  [nav] Pulling image komodor/kubestanut-nav:v2.4.1",
+            "2026-04-30T12:55:04Z INFO  [nav] Successfully pulled image in 1.923s",
+            "2026-04-30T12:55:05Z INFO  [nav] Started container nav-computer",
+            "2026-04-30T12:55:10Z INFO  [nav] Liveness probe: HTTP 200 OK (38ms)",
+            "2026-04-30T12:55:15Z INFO  [nav] Readiness probe: HTTP 200 OK — pod READY",
+            "2026-04-30T12:55:20Z INFO  [nav] NAV ONLINE: gyroscope calibration complete",
+            "2026-04-30T12:55:25Z INFO  [nav] Star chart sync: sector 7G loaded",
+            "2026-04-30T12:56:00Z INFO  [nav] Heartbeat OK — memory 801Mi/1024Mi (78%)",
+            "2026-04-30T12:57:00Z INFO  [nav] Star chart background refresh started",
+            "2026-04-30T12:58:00Z INFO  [nav] Scheduled reconciliation loop: OK",
+            "2026-04-30T12:59:00Z INFO  [nav] CPU: 221m/500m (44%) — nominal",
+            "2026-04-30T13:00:00Z INFO  [nav] Heartbeat OK — memory 854Mi/1024Mi (83%)",
+            "2026-04-30T13:01:00Z WARN  [nav] Memory usage: 912Mi/1024Mi (89%) — elevated",
+            "2026-04-30T13:01:30Z WARN  [nav] GC pressure: 847ms pause — excessive collection cycles",
+            "2026-04-30T13:02:00Z WARN  [nav] Memory usage: 966Mi/1024Mi (94%) — critical",
+            "2026-04-30T13:02:15Z WARN  [nav] Star chart cache cannot be evicted — pinned allocation",
+            "2026-04-30T13:02:30Z WARN  [nav] Memory usage: 988Mi/1024Mi (96%) — eviction threshold",
+            "2026-04-30T13:03:00Z WARN  [nav] Liveness probe slow: 2847ms (threshold 1000ms)",
+            "2026-04-30T13:03:30Z WARN  [nav] Memory usage: 1011Mi/1024Mi (98%) — imminent OOM",
+            "2026-04-30T13:04:00Z ERROR [nav] Readiness probe FAILED: connection timeout (5000ms)",
+            "2026-04-30T13:04:30Z ERROR [nav] Memory allocation failed: java.lang.OutOfMemoryError",
+            "2026-04-30T13:05:00Z ERROR [nav] Heap dump triggered: /tmp/nav-heap-20260430.hprof",
+            "2026-04-30T13:05:10Z WARN  [nav] Resource requests: 500m CPU / 1Gi memory",
+            "2026-04-30T13:05:18Z WARN  [nav] Memory pressure in nav-computer container",
+            "2026-04-30T13:05:21Z ERROR [nav] OOMKilled - container memory limit exceeded",
+            "2026-04-30T13:05:22Z FATAL [nav] Exit code: 137 (SIGKILL)",
+            "2026-04-30T13:05:23Z INFO  [nav] kubelet: Back-off restarting failed container",
+            "2026-04-30T13:05:28Z CRIT  [nav] CrashLoopBackOff: 7 restarts in the last 4 minutes",
+            "2026-04-30T13:05:33Z INFO  [nav] Container nav-computer restarting (attempt 8)...",
+            "2026-04-30T13:05:40Z ERROR [nav] OOMKilled again — container memory limit exceeded",
+            "2026-04-30T13:05:41Z FATAL [nav] Exit code: 137 (SIGKILL)",
+            "2026-04-30T13:05:42Z INFO  [nav] kubelet: back-off 40s before next restart attempt",
+            "2026-04-30T13:05:45Z WARN  [nav] Navigation offline — cannot plot course",
+        ]
+    },
+    engines: {
+        pod: 'kubestanut-engine-2a9f4c',
+        normal: [
+            "2026-04-30T12:55:00Z INFO  [eng] Pulling image komodor/kubestanut-engine:v1.9.3",
+            "2026-04-30T12:55:02Z INFO  [eng] Successfully pulled image in 2.107s",
+            "2026-04-30T12:55:03Z INFO  [eng] Started container engine-control",
+            "2026-04-30T12:55:08Z INFO  [eng] Liveness probe: HTTP 200 OK (55ms)",
+            "2026-04-30T12:55:14Z INFO  [eng] Readiness probe: HTTP 200 OK — pod READY",
+            "2026-04-30T12:55:20Z INFO  [eng] ENGINE ONLINE: core temp 2847°K nominal",
+            "2026-04-30T12:55:25Z INFO  [eng] Thrust output: 98.3% nominal",
+            "2026-04-30T12:55:30Z INFO  [eng] Coolant loop: pressure 4.2 MPa — OK",
+            "2026-04-30T12:58:00Z INFO  [eng] Scheduled diagnostics: all 14 sensors nominal",
+            "2026-04-30T13:00:00Z INFO  [eng] Heartbeat OK — memory 198Mi/512Mi (38%)",
+            "2026-04-30T13:01:00Z INFO  [eng] Combustion efficiency: 99.1%",
+            "2026-04-30T13:01:30Z WARN  [eng] Vibration sensor B-4: slightly elevated (within spec)",
+            "2026-04-30T13:02:00Z INFO  [eng] Memory 201Mi/512Mi (39%) — stable",
+            "2026-04-30T13:02:30Z INFO  [eng] Coolant temp: 312°K — nominal",
+            "2026-04-30T13:03:00Z WARN  [eng] Exhaust particulate: 0.003% over nominal — non-critical",
+            "2026-04-30T13:03:30Z INFO  [eng] CPU: 155m/400m (38%) — nominal",
+            "2026-04-30T13:04:00Z INFO  [eng] Liveness probe: HTTP 200 OK",
+            "2026-04-30T13:04:30Z INFO  [eng] Thrust output: 98.5% — nominal",
+            "2026-04-30T13:05:00Z INFO  [eng] Heartbeat OK — all engine subsystems green",
+            "2026-04-30T13:05:30Z INFO  [eng] Memory 204Mi/512Mi (39%) — stable",
+            "2026-04-30T13:05:45Z INFO  [eng] Engine bay nominal — ready for burn",
+        ],
+        incident: [
+            "2026-04-30T12:55:00Z INFO  [eng] Pulling image komodor/kubestanut-engine:v1.9.3",
+            "2026-04-30T12:55:02Z INFO  [eng] Successfully pulled image in 2.107s",
+            "2026-04-30T12:55:03Z INFO  [eng] Started container engine-control",
+            "2026-04-30T12:55:08Z INFO  [eng] Liveness probe: HTTP 200 OK (55ms)",
+            "2026-04-30T12:55:14Z INFO  [eng] Readiness probe: HTTP 200 OK — pod READY",
+            "2026-04-30T12:55:20Z INFO  [eng] ENGINE ONLINE: core temp 2847°K nominal",
+            "2026-04-30T12:55:25Z INFO  [eng] Thrust output: 98.3% nominal",
+            "2026-04-30T12:57:00Z INFO  [eng] Scheduled diagnostics: all 14 sensors nominal",
+            "2026-04-30T12:58:00Z INFO  [eng] Heartbeat OK — memory 398Mi/512Mi (77%)",
+            "2026-04-30T12:59:00Z INFO  [eng] Sensor telemetry buffer: 42,187 events queued",
+            "2026-04-30T13:00:00Z INFO  [eng] Heartbeat OK — memory 431Mi/512Mi (84%)",
+            "2026-04-30T13:00:30Z WARN  [eng] Memory usage: 456Mi/512Mi (89%) — elevated",
+            "2026-04-30T13:01:00Z WARN  [eng] Telemetry buffer growing: cannot flush to disk fast enough",
+            "2026-04-30T13:01:30Z WARN  [eng] GC pressure: 1124ms pause — JVM heap near capacity",
+            "2026-04-30T13:02:00Z WARN  [eng] Memory usage: 488Mi/512Mi (95%) — critical",
+            "2026-04-30T13:02:30Z WARN  [eng] Liveness probe slow: 3201ms — degraded response",
+            "2026-04-30T13:03:00Z WARN  [eng] Memory usage: 502Mi/512Mi (98%) — imminent OOM",
+            "2026-04-30T13:03:30Z ERROR [eng] Readiness probe FAILED: connection timeout",
+            "2026-04-30T13:04:00Z ERROR [eng] Memory allocation failed: unable to allocate 64MB block",
+            "2026-04-30T13:04:30Z ERROR [eng] Heap dump: /tmp/engine-heap-dump.hprof (488MB)",
+            "2026-04-30T13:05:00Z INFO  [eng] Resource requests: 400m CPU / 512Mi memory",
+            "2026-04-30T13:05:12Z WARN  [eng] High memory pressure in engine-control container",
+            "2026-04-30T13:05:18Z WARN  [eng] High memory pressure detected in engine-control",
+            "2026-04-30T13:05:21Z ERROR [eng] OOMKilled - container memory limit exceeded",
+            "2026-04-30T13:05:22Z FATAL [eng] Exit code: 137 (SIGKILL)",
+            "2026-04-30T13:05:23Z INFO  [eng] kubelet: Back-off restarting failed container",
+            "2026-04-30T13:05:28Z CRIT  [eng] CrashLoopBackOff: 6 restarts in the last 3 minutes",
+            "2026-04-30T13:05:33Z INFO  [eng] Restarting engine-control (attempt 7)...",
+            "2026-04-30T13:05:39Z ERROR [eng] OOMKilled again — container memory limit exceeded",
+            "2026-04-30T13:05:40Z FATAL [eng] Exit code: 137 (SIGKILL)",
+            "2026-04-30T13:05:41Z INFO  [eng] kubelet: back-off 40s delay before restart #7",
+            "2026-04-30T13:05:45Z WARN  [eng] Engine bay offline — ship cannot lift off",
+        ]
+    },
+    'fuel-a': {
+        pod: 'kubestanut-fuel-a-5c2d8e',
+        normal: [
+            "2026-04-30T12:55:05Z INFO  [fuelA] Pulling image komodor/kubestanut-fuel:v3.1.0",
+            "2026-04-30T12:55:07Z INFO  [fuelA] Successfully pulled image in 1.412s",
+            "2026-04-30T12:55:08Z INFO  [fuelA] Started container fuel-management",
+            "2026-04-30T12:55:13Z INFO  [fuelA] Liveness probe: HTTP 200 OK (29ms)",
+            "2026-04-30T12:55:18Z INFO  [fuelA] Readiness probe: HTTP 200 OK — pod READY",
+            "2026-04-30T12:55:22Z INFO  [fuelA] FUEL BAY A ONLINE: dilithium stable",
+            "2026-04-30T12:55:25Z INFO  [fuelA] Fuel level: 94.2% — containment field nominal",
+            "2026-04-30T12:55:30Z INFO  [fuelA] Transfer rate: 847 L/sec — nominal",
+            "2026-04-30T12:58:00Z INFO  [fuelA] Scheduled sensor poll: all 8 sensors green",
+            "2026-04-30T13:00:00Z INFO  [fuelA] Heartbeat OK — memory 298Mi/768Mi (38%)",
+            "2026-04-30T13:01:00Z WARN  [fuelA] Containment field fluctuation: 0.002% — within tolerance",
+            "2026-04-30T13:01:30Z INFO  [fuelA] Fluctuation resolved — field nominal",
+            "2026-04-30T13:02:00Z INFO  [fuelA] Memory 301Mi/768Mi (39%) — stable",
+            "2026-04-30T13:02:30Z INFO  [fuelA] Fuel level: 93.8% — normal consumption",
+            "2026-04-30T13:03:00Z WARN  [fuelA] Pressure sensor A-7: calibration drift 0.4% — non-critical",
+            "2026-04-30T13:03:30Z INFO  [fuelA] CPU: 112m/300m (37%) — nominal",
+            "2026-04-30T13:04:00Z INFO  [fuelA] Transfer rate: 849 L/sec — nominal",
+            "2026-04-30T13:04:30Z INFO  [fuelA] Heartbeat OK — all subsystems green",
+            "2026-04-30T13:05:00Z INFO  [fuelA] Memory 299Mi/768Mi (38%) — stable",
+            "2026-04-30T13:05:30Z INFO  [fuelA] Containment field: NOMINAL",
+            "2026-04-30T13:05:45Z INFO  [fuelA] Fuel Bay A online — flow nominal",
+        ],
+        incident: [
+            "2026-04-30T12:55:05Z INFO  [fuelA] Pulling image komodor/kubestanut-fuel:v3.1.0",
+            "2026-04-30T12:55:07Z INFO  [fuelA] Successfully pulled image in 1.412s",
+            "2026-04-30T12:55:08Z INFO  [fuelA] Started container fuel-management",
+            "2026-04-30T12:55:13Z INFO  [fuelA] Liveness probe: HTTP 200 OK (29ms)",
+            "2026-04-30T12:55:18Z INFO  [fuelA] Readiness probe: HTTP 200 OK — pod READY",
+            "2026-04-30T12:55:22Z INFO  [fuelA] FUEL BAY A ONLINE: dilithium stable",
+            "2026-04-30T12:55:25Z INFO  [fuelA] Fuel level: 94.2% — containment field nominal",
+            "2026-04-30T12:57:00Z INFO  [fuelA] Sensor telemetry aggregation started: 2,847 metrics",
+            "2026-04-30T12:58:00Z INFO  [fuelA] Heartbeat OK — memory 601Mi/768Mi (78%)",
+            "2026-04-30T12:59:00Z INFO  [fuelA] Historical sensor data loading: 18,432 records",
+            "2026-04-30T13:00:00Z WARN  [fuelA] Memory usage: 668Mi/768Mi (87%) — elevated",
+            "2026-04-30T13:00:30Z WARN  [fuelA] Sensor history cache: unable to evict LRU entries",
+            "2026-04-30T13:01:00Z WARN  [fuelA] Memory usage: 711Mi/768Mi (92%) — critical threshold",
+            "2026-04-30T13:01:30Z WARN  [fuelA] GC overhead: 89% of CPU time spent in garbage collection",
+            "2026-04-30T13:02:00Z WARN  [fuelA] Memory usage: 744Mi/768Mi (96%) — imminent",
+            "2026-04-30T13:02:15Z WARN  [fuelA] Liveness probe slow: 4012ms — container unresponsive",
+            "2026-04-30T13:02:30Z WARN  [fuelA] Memory usage: 756Mi/768Mi (98%) — eviction imminent",
+            "2026-04-30T13:03:00Z ERROR [fuelA] Readiness probe FAILED: EOF",
+            "2026-04-30T13:03:30Z ERROR [fuelA] Memory allocation failed: unable to reserve buffer",
+            "2026-04-30T13:04:00Z ERROR [fuelA] Heap dump written: /tmp/fuelA-heap-20260430.hprof",
+            "2026-04-30T13:04:30Z ERROR [fuelA] Container entering OOM state",
+            "2026-04-30T13:05:00Z INFO  [fuelA] Resource requests: 300m CPU / 768Mi memory",
+            "2026-04-30T13:05:10Z WARN  [fuelA] Memory pressure in fuel-management container",
+            "2026-04-30T13:05:21Z ERROR [fuelA] OOMKilled - container memory limit exceeded",
+            "2026-04-30T13:05:22Z FATAL [fuelA] Exit code: 137 (SIGKILL)",
+            "2026-04-30T13:05:23Z INFO  [fuelA] kubelet: Back-off restarting failed container",
+            "2026-04-30T13:05:28Z CRIT  [fuelA] CrashLoopBackOff: 8 restarts in the last 5 minutes",
+            "2026-04-30T13:05:35Z INFO  [fuelA] Container fuel-management restarting (attempt 9)...",
+            "2026-04-30T13:05:42Z ERROR [fuelA] OOMKilled again — container memory limit exceeded",
+            "2026-04-30T13:05:43Z FATAL [fuelA] Exit code: 137 (SIGKILL)",
+            "2026-04-30T13:05:44Z INFO  [fuelA] kubelet: back-off 80s before restart #9",
+            "2026-04-30T13:05:45Z WARN  [fuelA] Fuel Bay A offline — fuel flow disrupted",
+        ]
+    },
+    'fuel-b': {
+        pod: 'kubestanut-fuel-b-1e7c3f',
+        normal: [
+            "2026-04-30T12:55:05Z INFO  [fuelB] Pulling image komodor/kubestanut-fuel:v3.1.0",
+            "2026-04-30T12:55:07Z INFO  [fuelB] Successfully pulled image in 1.388s",
+            "2026-04-30T12:55:08Z INFO  [fuelB] Started container fuel-management",
+            "2026-04-30T12:55:13Z INFO  [fuelB] Liveness probe: HTTP 200 OK (31ms)",
+            "2026-04-30T12:55:18Z INFO  [fuelB] Readiness probe: HTTP 200 OK — pod READY",
+            "2026-04-30T12:55:22Z INFO  [fuelB] FUEL BAY B ONLINE: dilithium stable",
+            "2026-04-30T12:55:25Z INFO  [fuelB] Fuel level: 91.7% — containment field nominal",
+            "2026-04-30T12:58:00Z INFO  [fuelB] Scheduled sensor poll: all 8 sensors green",
+            "2026-04-30T13:00:00Z INFO  [fuelB] Heartbeat OK — memory 304Mi/768Mi (39%)",
+            "2026-04-30T13:01:00Z INFO  [fuelB] Transfer rate: 831 L/sec — nominal",
+            "2026-04-30T13:01:30Z WARN  [fuelB] Network latency to fuel-a: 14ms — slightly elevated",
+            "2026-04-30T13:02:00Z INFO  [fuelB] Memory 308Mi/768Mi (40%) — stable",
+            "2026-04-30T13:02:30Z WARN  [fuelB] Backup valve B-2: response 2ms over spec — non-critical",
+            "2026-04-30T13:03:00Z INFO  [fuelB] Containment field: NOMINAL",
+            "2026-04-30T13:03:30Z INFO  [fuelB] CPU: 119m/300m (39%) — nominal",
+            "2026-04-30T13:04:00Z INFO  [fuelB] Heartbeat OK — memory 305Mi/768Mi (39%)",
+            "2026-04-30T13:04:30Z INFO  [fuelB] Transfer rate: 829 L/sec — nominal",
+            "2026-04-30T13:05:00Z INFO  [fuelB] Liveness probe: HTTP 200 OK (34ms)",
+            "2026-04-30T13:05:30Z INFO  [fuelB] Containment field stable — 0 anomalies",
+            "2026-04-30T13:05:45Z INFO  [fuelB] Fuel Bay B online — secondary feed nominal",
+        ],
+        incident: [
+            "2026-04-30T12:55:05Z INFO  [fuelB] Pulling image komodor/kubestanut-fuel:v3.1.0",
+            "2026-04-30T12:55:07Z INFO  [fuelB] Successfully pulled image in 1.388s",
+            "2026-04-30T12:55:08Z INFO  [fuelB] Started container fuel-management",
+            "2026-04-30T12:55:13Z INFO  [fuelB] Liveness probe: HTTP 200 OK (31ms)",
+            "2026-04-30T12:55:18Z INFO  [fuelB] Readiness probe: HTTP 200 OK — pod READY",
+            "2026-04-30T12:55:22Z INFO  [fuelB] FUEL BAY B ONLINE: dilithium stable",
+            "2026-04-30T12:55:25Z INFO  [fuelB] Fuel level: 91.7% — containment field nominal",
+            "2026-04-30T12:57:00Z INFO  [fuelB] Starting cross-bay synchronization with fuel-a",
+            "2026-04-30T12:58:00Z INFO  [fuelB] Heartbeat OK — memory 588Mi/768Mi (76%)",
+            "2026-04-30T12:59:00Z INFO  [fuelB] Loading cross-bay delta log: 24,911 entries",
+            "2026-04-30T13:00:00Z WARN  [fuelB] Memory usage: 648Mi/768Mi (84%) — elevated",
+            "2026-04-30T13:00:30Z WARN  [fuelB] Delta log replay holding 312MB in-memory",
+            "2026-04-30T13:01:00Z WARN  [fuelB] Memory usage: 704Mi/768Mi (91%) — critical",
+            "2026-04-30T13:01:30Z WARN  [fuelB] GC stall: 2188ms pause — application threads blocked",
+            "2026-04-30T13:02:00Z WARN  [fuelB] Memory usage: 737Mi/768Mi (96%) — imminent OOM",
+            "2026-04-30T13:02:15Z WARN  [fuelB] Readiness probe slow: 3881ms",
+            "2026-04-30T13:02:30Z WARN  [fuelB] Memory usage: 755Mi/768Mi (98%) — OOM imminent",
+            "2026-04-30T13:03:00Z ERROR [fuelB] Readiness probe FAILED: connection refused",
+            "2026-04-30T13:03:30Z ERROR [fuelB] OutOfMemoryError: Java heap space",
+            "2026-04-30T13:04:00Z ERROR [fuelB] Unable to serialize cross-bay sync buffer",
+            "2026-04-30T13:04:30Z ERROR [fuelB] Container entering terminal OOM state",
+            "2026-04-30T13:05:00Z INFO  [fuelB] Resource requests: 300m CPU / 768Mi memory",
+            "2026-04-30T13:05:10Z WARN  [fuelB] Memory pressure in fuel-management container",
+            "2026-04-30T13:05:21Z ERROR [fuelB] OOMKilled - container memory limit exceeded",
+            "2026-04-30T13:05:22Z FATAL [fuelB] Exit code: 137 (SIGKILL)",
+            "2026-04-30T13:05:23Z INFO  [fuelB] kubelet: Back-off restarting failed container",
+            "2026-04-30T13:05:28Z CRIT  [fuelB] CrashLoopBackOff: 6 restarts in the last 4 minutes",
+            "2026-04-30T13:05:35Z INFO  [fuelB] Container fuel-management restarting (attempt 7)...",
+            "2026-04-30T13:05:41Z ERROR [fuelB] OOMKilled again — container memory limit exceeded",
+            "2026-04-30T13:05:42Z FATAL [fuelB] Exit code: 137 (SIGKILL)",
+            "2026-04-30T13:05:43Z INFO  [fuelB] kubelet: back-off 40s before restart #7",
+            "2026-04-30T13:05:45Z WARN  [fuelB] Fuel Bay B offline — secondary fuel feed lost",
+        ]
+    },
+    landing: {
+        pod: 'kubestanut-landing-9b4a2d',
+        normal: [
+            "2026-04-30T12:55:03Z INFO  [land] Pulling image komodor/kubestanut-landing:v2.0.7",
+            "2026-04-30T12:55:05Z INFO  [land] Successfully pulled image in 1.219s",
+            "2026-04-30T12:55:06Z INFO  [land] Started container landing-control",
+            "2026-04-30T12:55:11Z INFO  [land] Liveness probe: HTTP 200 OK (44ms)",
+            "2026-04-30T12:55:17Z INFO  [land] Readiness probe: HTTP 200 OK — pod READY",
+            "2026-04-30T12:55:22Z INFO  [land] LANDING CTRL ONLINE: struts RETRACTED",
+            "2026-04-30T12:55:25Z INFO  [land] Descent thrusters: all 8 online",
+            "2026-04-30T12:55:30Z INFO  [land] Pad approach system: STANDBY",
+            "2026-04-30T12:58:00Z INFO  [land] Scheduled diagnostics: all 22 landing sensors green",
+            "2026-04-30T13:00:00Z INFO  [land] Heartbeat OK — memory 201Mi/512Mi (39%)",
+            "2026-04-30T13:01:00Z INFO  [land] Terrain scan buffer: 0.8MB — nominal",
+            "2026-04-30T13:01:30Z WARN  [land] Altimeter B: reading 0.3m off — auto-calibrating",
+            "2026-04-30T13:02:00Z INFO  [land] Altimeter B calibrated — delta zeroed",
+            "2026-04-30T13:02:30Z INFO  [land] Memory 199Mi/512Mi (38%) — stable",
+            "2026-04-30T13:03:00Z WARN  [land] Pad camera: 3 dropped frames — non-critical",
+            "2026-04-30T13:03:30Z INFO  [land] CPU: 138m/350m (39%) — nominal",
+            "2026-04-30T13:04:00Z INFO  [land] Liveness probe: HTTP 200 OK",
+            "2026-04-30T13:04:30Z INFO  [land] Descent thruster #6 test-fire: nominal",
+            "2026-04-30T13:05:00Z INFO  [land] Heartbeat OK — memory 203Mi/512Mi (39%)",
+            "2026-04-30T13:05:30Z INFO  [land] Landing CTRL nominal — ready for descent sequence",
+            "2026-04-30T13:05:45Z INFO  [land] All landing systems online",
+        ],
+        incident: [
+            "2026-04-30T12:55:03Z INFO  [land] Pulling image komodor/kubestanut-landing:v2.0.7",
+            "2026-04-30T12:55:05Z INFO  [land] Successfully pulled image in 1.219s",
+            "2026-04-30T12:55:06Z INFO  [land] Started container landing-control",
+            "2026-04-30T12:55:11Z INFO  [land] Liveness probe: HTTP 200 OK (44ms)",
+            "2026-04-30T12:55:17Z INFO  [land] Readiness probe: HTTP 200 OK — pod READY",
+            "2026-04-30T12:55:22Z INFO  [land] LANDING CTRL ONLINE: struts RETRACTED",
+            "2026-04-30T12:55:25Z INFO  [land] Descent thrusters: all 8 online",
+            "2026-04-30T12:57:00Z INFO  [land] High-res terrain scan initiated: 4096x4096 buffer",
+            "2026-04-30T12:58:00Z INFO  [land] Heartbeat OK — memory 402Mi/512Mi (78%)",
+            "2026-04-30T12:59:00Z INFO  [land] Terrain scan processing: 16 million elevation points",
+            "2026-04-30T13:00:00Z WARN  [land] Memory usage: 449Mi/512Mi (87%) — elevated",
+            "2026-04-30T13:00:30Z WARN  [land] Terrain scan cannot be paged — locked in memory",
+            "2026-04-30T13:01:00Z WARN  [land] Memory usage: 479Mi/512Mi (93%) — critical",
+            "2026-04-30T13:01:30Z WARN  [land] GC pressure: 1844ms pause — full heap scan",
+            "2026-04-30T13:02:00Z WARN  [land] Memory usage: 498Mi/512Mi (97%) — OOM imminent",
+            "2026-04-30T13:02:15Z WARN  [land] Liveness probe slow: 3481ms",
+            "2026-04-30T13:02:30Z WARN  [land] Memory usage: 507Mi/512Mi (99%) — critical",
+            "2026-04-30T13:03:00Z ERROR [land] Readiness probe FAILED: no route to container",
+            "2026-04-30T13:03:30Z ERROR [land] Unable to allocate terrain render buffer: 32MB",
+            "2026-04-30T13:04:00Z ERROR [land] OutOfMemoryError — native heap exhausted",
+            "2026-04-30T13:04:30Z ERROR [land] Container unresponsive — all probes failing",
+            "2026-04-30T13:05:00Z INFO  [land] Resource requests: 350m CPU / 512Mi memory",
+            "2026-04-30T13:05:10Z WARN  [land] Memory pressure in landing-control container",
+            "2026-04-30T13:05:21Z ERROR [land] OOMKilled - container memory limit exceeded",
+            "2026-04-30T13:05:22Z FATAL [land] Exit code: 137 (SIGKILL)",
+            "2026-04-30T13:05:23Z INFO  [land] kubelet: Back-off restarting failed container",
+            "2026-04-30T13:05:28Z CRIT  [land] CrashLoopBackOff: 5 restarts in the last 3 minutes",
+            "2026-04-30T13:05:34Z INFO  [land] Container landing-control restarting (attempt 6)...",
+            "2026-04-30T13:05:40Z ERROR [land] OOMKilled again — container memory limit exceeded",
+            "2026-04-30T13:05:41Z FATAL [land] Exit code: 137 (SIGKILL)",
+            "2026-04-30T13:05:42Z INFO  [land] kubelet: back-off 40s before restart #6",
+            "2026-04-30T13:05:45Z WARN  [land] Landing control offline — cannot initiate descent",
+        ]
+    }
+};
+
+// ── Fix options — 4 extremely similar, 1 correct ──────────────────
+function getFIXOptions(sysId) {
+    const d = `kubestanut-${sysId.replace('-','')}`;
+    return getCurrentScenario().getFixOptions(d);
+}
+
+const EASTER_EGGS = {
+    'fuel-a': "Arc Reactor found in Fuel Bay A! +50pts",
+    'fuel-b': "Arc Reactor found in Fuel Bay B! +50pts",
+    landing:  "Darth Vader's lightsaber found in Landing Ctrl! +50pts"
+};
+
+function getCurrentScenario() {
+    return SCENARIOS.find(s => s.id === GAME_STATE.scenarioId) || SCENARIOS[0];
+}
+
+function getIncidentLogs(sysId) {
+    const scen = getCurrentScenario();
+    const tag  = TAG_MAP[sysId];
+    if (scen.id === 'oomkill') return SYSTEM_LOGS[sysId].incident;
+    if (scen.id === 'imagepull') return [...SYSTEM_LOGS[sysId].normal.slice(0, 16), ...scen.incidentTail(tag, sysId)];
+    // cputhrottle: normal startup + throttle events
+    return [...SYSTEM_LOGS[sysId].normal.slice(0, 15), ...scen.incidentTail(tag, sysId)];
+}
+
+function applyScenarioUI() {
+    const scen = getCurrentScenario();
+    const el   = document.getElementById('incident-label');
+    if (!el) return;
+    el.textContent = scen.header;
+    el.style.color = scen.headerColor;
+    el.style.textShadow = `0 0 12px ${scen.headerColor}, 0 0 24px ${scen.headerColor}66`;
+}
+
+let player = { x:260, y:120, size:32 };
+let keys = {};
+let nearHotspot = null;
+let tick = 0;
+
+// ── Drawing ───────────────────────────────────────────────────────
+
+function drawWallLines() {
+    [ [380,170,380,440],[690,170,690,440],
+      [120,190,380,190],[690,190,950,190],
+      [270,390,270,590],[780,390,780,590] ].forEach(([x1,y1,x2,y2]) => {
+        CTX.beginPath(); CTX.moveTo(x1,y1); CTX.lineTo(x2,y2); CTX.stroke();
+    });
+}
+
+function drawPorthole(cx, cy) {
+    CTX.fillStyle = '#0a1520'; CTX.fillRect(cx-14,cy-10,28,20);
+    CTX.fillStyle = '#020810'; CTX.fillRect(cx-11,cy-7,22,14);
+    [[3,2],[10,4],[17,2],[5,9],[14,7],[8,11],[19,10]].forEach(([sx,sy]) => {
+        CTX.fillStyle = `rgba(200,220,255,${0.4+Math.random()*0.4})`;
+        CTX.fillRect(cx-11+sx, cy-7+sy, 1, 1);
+    });
+    CTX.strokeStyle = '#1a2a3a'; CTX.lineWidth = 2;
+    CTX.strokeRect(cx-14,cy-10,28,20);
+    CTX.strokeStyle = '#2a3a4a'; CTX.lineWidth = 1;
+    CTX.strokeRect(cx-11,cy-7,22,14);
+}
+
+function drawPortholeLarge(cx, cy) {
+    // Outer frame
+    CTX.fillStyle = '#061018'; CTX.fillRect(cx-26,cy-18,52,36);
+    // Glass
+    CTX.fillStyle = '#010608'; CTX.fillRect(cx-22,cy-14,44,28);
+    // Space glow tint
+    const gp = 0.12 + Math.sin(tick*0.022 + cx*0.01)*0.06;
+    CTX.fillStyle = `rgba(10,40,80,${gp})`; CTX.fillRect(cx-22,cy-14,44,28);
+    // Stars
+    [[4,3],[12,6],[22,3],[34,5],[8,15],[18,10],[28,14],[38,11],[6,21],[16,19],[30,8],[40,20],[10,24],[24,22],[36,17]].forEach(([sx,sy]) => {
+        CTX.fillStyle = `rgba(200,225,255,${0.35+Math.random()*0.5})`;
+        CTX.fillRect(cx-22+sx, cy-14+sy, 1, 1);
+    });
+    // Rivets at corners
+    [[cx-24,cy-16],[cx+22,cy-16],[cx-24,cy+14],[cx+22,cy+14]].forEach(([rx,ry])=>{
+        CTX.fillStyle='#0d2030'; CTX.fillRect(rx-2,ry-2,4,4);
+        CTX.strokeStyle='#1a3040'; CTX.lineWidth=1; CTX.strokeRect(rx-2,ry-2,4,4);
+    });
+    // Frame borders
+    CTX.shadowColor='#004466'; CTX.shadowBlur=6;
+    CTX.strokeStyle = '#1e3a4a'; CTX.lineWidth = 2.5;
+    CTX.strokeRect(cx-26,cy-18,52,36);
+    CTX.shadowBlur=0;
+    CTX.strokeStyle = '#2a4a5a'; CTX.lineWidth = 1;
+    CTX.strokeRect(cx-22,cy-14,44,28);
+}
+
+function drawRoomInterior(h) {
+    const mx = h.x + Math.round(h.w / 2);
+    const isNear = nearHotspot && nearHotspot.id === h.id;
+
+    // ── Tile floor inside room ──────────────────────────────────────
+    const TILE = 18;
+    CTX.save();
+    CTX.beginPath(); CTX.rect(h.x+2, h.y+2, h.w-4, h.h-4); CTX.clip();
+    CTX.strokeStyle = 'rgba(0,200,255,0.09)'; CTX.lineWidth = 1;
+    for(let x=h.x; x<=h.x+h.w; x+=TILE){ CTX.beginPath(); CTX.moveTo(x,h.y); CTX.lineTo(x,h.y+h.h); CTX.stroke(); }
+    for(let y=h.y; y<=h.y+h.h; y+=TILE){ CTX.beginPath(); CTX.moveTo(h.x,y); CTX.lineTo(h.x+h.w,y); CTX.stroke(); }
+    CTX.restore();
+
+    switch(h.id) {
+
+    case 'main-computer': {
+        // ── 3 large monitors across back wall ──
+        const mW=56, mH=36, mY=h.y+14;
+        [mx-68, mx, mx+68].forEach((bx,i) => {
+            CTX.fillStyle='#060e18'; CTX.fillRect(bx-mW/2, mY, mW, mH);
+            // Screen glow
+            const pulse=(Math.sin(tick*0.04+i*1.1)*0.5+0.5);
+            CTX.fillStyle=`rgba(0,${80+Math.round(pulse*60)},180,0.35)`; CTX.fillRect(bx-mW/2+2, mY+2, mW-4, mH-4);
+            // Data lines on screen
+            CTX.strokeStyle=`rgba(0,180,255,${0.3+pulse*0.3})`; CTX.lineWidth=1;
+            for(let j=0;j<4;j++){
+                CTX.beginPath(); CTX.moveTo(bx-mW/2+4, mY+8+j*6); CTX.lineTo(bx-mW/2+4+Math.round((mW-8)*([0.9,0.6,0.8,0.5][j])), mY+8+j*6); CTX.stroke();
+            }
+            CTX.strokeStyle='#00ccff'; CTX.lineWidth=1.5;
+            CTX.strokeRect(bx-mW/2, mY, mW, mH);
+        });
+        // ── Central control console ──
+        const cy2=h.y+h.h-38;
+        CTX.fillStyle='#0a1e35'; CTX.fillRect(mx-38, cy2, 76, 28);
+        CTX.strokeStyle='#0088bb'; CTX.lineWidth=1; CTX.strokeRect(mx-38, cy2, 76, 28);
+        // Small monitor on console
+        CTX.fillStyle='#060e18'; CTX.fillRect(mx-18, cy2+2, 36, 18);
+        CTX.strokeStyle='#00ccff'; CTX.lineWidth=1; CTX.strokeRect(mx-18, cy2+2, 36, 18);
+        CTX.fillStyle='rgba(0,150,255,0.3)'; CTX.fillRect(mx-16, cy2+4, 32, 14);
+        // Orange emergency button (like reference)
+        const blink=(Math.sin(tick*0.06)*0.5+0.5);
+        CTX.shadowColor='#ff6600'; CTX.shadowBlur=6+blink*8;
+        CTX.fillStyle=`rgb(${200+Math.round(blink*55)},${80+Math.round(blink*30)},0)`;
+        CTX.beginPath(); CTX.arc(mx, cy2+22, 6, 0, Math.PI*2); CTX.fill();
+        CTX.shadowBlur=0;
+        CTX.strokeStyle='#883300'; CTX.lineWidth=1.5;
+        CTX.beginPath(); CTX.arc(mx, cy2+22, 6, 0, Math.PI*2); CTX.stroke();
+        // Side wall panels
+        [[h.x+2,h.y+52,14,44],[h.x+h.w-16,h.y+52,14,44]].forEach(([px,py,pw,ph])=>{
+            CTX.fillStyle='#081828'; CTX.fillRect(px,py,pw,ph);
+            for(let i=0;i<4;i++){
+                const on=(tick+i*20)%60<30;
+                CTX.fillStyle=on?'#00aaff':'#0a1a2a'; CTX.fillRect(px+3,py+4+i*9,pw-6,6);
+            }
+            CTX.strokeStyle='#0055aa'; CTX.lineWidth=1; CTX.strokeRect(px,py,pw,ph);
+        });
+        break;
+    }
+
+    case 'nav': {
+        // ── Two side terminals ──
+        [mx-65, mx+65].forEach((tx,i)=>{
+            CTX.fillStyle='#08182e'; CTX.fillRect(tx-20, h.y+28, 40, 58);
+            // Screen
+            CTX.fillStyle='#040c1a'; CTX.fillRect(tx-16, h.y+32, 32, 28);
+            const p=(Math.sin(tick*0.03+i*2.1)*0.5+0.5);
+            CTX.fillStyle=`rgba(0,150,220,${0.2+p*0.3})`; CTX.fillRect(tx-14, h.y+34, 28, 24);
+            // Scan line
+            const sl=h.y+34+Math.round((tick*0.5+i*14)%24);
+            CTX.fillStyle='rgba(0,200,255,0.25)'; CTX.fillRect(tx-14, sl, 28, 2);
+            CTX.strokeStyle='#0077aa'; CTX.lineWidth=1; CTX.strokeRect(tx-16, h.y+32, 32, 28);
+            // Keyboard
+            CTX.fillStyle='#0a1828'; CTX.fillRect(tx-16, h.y+62, 32, 18);
+            for(let r=0;r<2;r++) for(let c=0;c<6;c++)
+                { CTX.fillStyle='#0d2035'; CTX.fillRect(tx-14+c*5, h.y+64+r*8, 4, 6); }
+            CTX.strokeStyle='#004466'; CTX.lineWidth=1; CTX.strokeRect(tx-20, h.y+28, 40, 58);
+        });
+        // ── Central display ──
+        CTX.fillStyle='#060e1c'; CTX.fillRect(mx-22, h.y+30, 44, 44);
+        CTX.strokeStyle='#0077bb'; CTX.lineWidth=1; CTX.strokeRect(mx-22, h.y+30, 44, 44);
+        // Mini radar
+        const rcx=mx, rcy=h.y+52;
+        CTX.strokeStyle='#0055aa'; CTX.lineWidth=1;
+        [18,12,6].forEach(r=>{ CTX.beginPath(); CTX.arc(rcx,rcy,r,0,Math.PI*2); CTX.stroke(); });
+        CTX.strokeStyle='rgba(0,80,160,0.4)'; CTX.lineWidth=0.5;
+        CTX.beginPath(); CTX.moveTo(rcx-20,rcy); CTX.lineTo(rcx+20,rcy); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(rcx,rcy-20); CTX.lineTo(rcx,rcy+20); CTX.stroke();
+        const ra=tick*0.025;
+        CTX.strokeStyle='rgba(0,180,255,0.4)'; CTX.lineWidth=1.5;
+        CTX.beginPath(); CTX.moveTo(rcx,rcy); CTX.lineTo(rcx+Math.cos(ra)*18,rcy+Math.sin(ra)*18); CTX.stroke();
+        CTX.fillStyle='#00eeff'; CTX.fillRect(rcx+Math.cos(ra)*13-1,rcy+Math.sin(ra)*13-1,2,2);
+        CTX.fillStyle='#0055cc'; CTX.beginPath(); CTX.arc(rcx,rcy,2,0,Math.PI*2); CTX.fill();
+        // Bottom label strip
+        CTX.fillStyle='rgba(0,20,40,0.7)'; CTX.fillRect(h.x+2, h.y+h.h-16, h.w-4, 14);
+        break;
+    }
+
+    case 'engines': {
+        // ── Red/orange tiled floor override ──
+        CTX.save();
+        CTX.beginPath(); CTX.rect(h.x+2,h.y+2,h.w-4,h.h-4); CTX.clip();
+        CTX.fillStyle='rgba(120,30,0,0.3)'; CTX.fillRect(h.x,h.y,h.w,h.h);
+        CTX.strokeStyle='rgba(255,80,0,0.12)'; CTX.lineWidth=1;
+        for(let x=h.x;x<=h.x+h.w;x+=18){ CTX.beginPath(); CTX.moveTo(x,h.y); CTX.lineTo(x,h.y+h.h); CTX.stroke(); }
+        for(let y=h.y;y<=h.y+h.h;y+=18){ CTX.beginPath(); CTX.moveTo(h.x,y); CTX.lineTo(h.x+h.w,y); CTX.stroke(); }
+        CTX.restore();
+        // ── Two large engine nacelles ──
+        [-62, 62].forEach((off,i)=>{
+            const ex=mx+off, ey=h.y+h.h-30;
+            // Nacelle body (tall cylinder look)
+            CTX.fillStyle='#3a3050'; CTX.fillRect(ex-22, h.y+28, 44, 90);
+            // Ribbed segments
+            CTX.strokeStyle='#2a2040'; CTX.lineWidth=1;
+            for(let r=0;r<5;r++) CTX.strokeRect(ex-22, h.y+28+r*16, 44, 16);
+            // Top dome cap
+            CTX.fillStyle='#4a4060';
+            CTX.beginPath(); CTX.arc(ex, h.y+28, 22, Math.PI, 0); CTX.fill();
+            CTX.strokeStyle='#6a6080'; CTX.lineWidth=1;
+            CTX.beginPath(); CTX.arc(ex, h.y+28, 22, Math.PI, 0); CTX.stroke();
+            // Exhaust nozzle at bottom
+            const pulse=(Math.sin(tick*0.07+i*1.5)*0.5+0.5);
+            const rv=Math.round(220+pulse*35), gv=Math.round(70+pulse*60);
+            CTX.shadowColor=`rgb(${rv},${gv},0)`; CTX.shadowBlur=16+pulse*12;
+            CTX.fillStyle=`rgb(${rv},${gv},0)`;
+            CTX.beginPath(); CTX.arc(ex, h.y+h.h-12, 14+pulse*4, 0, Math.PI*2); CTX.fill();
+            CTX.shadowBlur=0;
+            CTX.fillStyle='#ffdd66'; CTX.beginPath(); CTX.arc(ex, h.y+h.h-12, 5, 0, Math.PI*2); CTX.fill();
+            // Nozzle ring
+            CTX.strokeStyle='#554400'; CTX.lineWidth=2;
+            CTX.beginPath(); CTX.arc(ex, h.y+h.h-12, 18, 0, Math.PI*2); CTX.stroke();
+        });
+        // ── Hazard / WARNING HIGH TEMP signs at bottom ──
+        [mx-62, mx+62].forEach(wx=>{
+            const wy=h.y+h.h-22;
+            // Hazard stripes
+            CTX.save(); CTX.beginPath(); CTX.rect(wx-22,wy,44,12); CTX.clip();
+            CTX.fillStyle='#221100';
+            for(let i=-2;i<8;i++){
+                CTX.fillStyle=i%2===0?'#221100':'rgba(255,160,0,0.5)';
+                CTX.fillRect(wx-22+i*6, wy, 6, 12);
+            }
+            CTX.restore();
+            CTX.strokeStyle='#884400'; CTX.lineWidth=1; CTX.strokeRect(wx-22,wy,44,12);
+        });
+        // Central intake grate
+        CTX.fillStyle='#1a0800'; CTX.fillRect(mx-20, h.y+h.h-18, 40, 12);
+        CTX.strokeStyle='#441100'; CTX.lineWidth=1; CTX.strokeRect(mx-20, h.y+h.h-18, 40, 12);
+        for(let i=0;i<6;i++) { CTX.fillStyle='#0a0400'; CTX.fillRect(mx-18+i*6, h.y+h.h-16, 4, 8); }
+        break;
+    }
+
+    case 'fuel-a': {
+        // ── Orange cylindrical fuel tank ──
+        const tx=h.x+42, ty=h.y+30, tw=38, th=90;
+        // Tank body
+        CTX.fillStyle='#c05010'; CTX.fillRect(tx, ty, tw, th);
+        // Highlight stripe
+        CTX.fillStyle='#e07030'; CTX.fillRect(tx+6, ty, 6, th);
+        // Ribbed bands
+        CTX.strokeStyle='#803010'; CTX.lineWidth=2;
+        for(let i=0;i<5;i++) CTX.strokeRect(tx, ty+i*16, tw, 16);
+        // Tank cap
+        CTX.fillStyle='#d06020'; CTX.beginPath(); CTX.arc(tx+tw/2, ty, tw/2, Math.PI, 0); CTX.fill();
+        CTX.strokeStyle='#ff8030'; CTX.lineWidth=1; CTX.beginPath(); CTX.arc(tx+tw/2, ty, tw/2, Math.PI, 0); CTX.stroke();
+        // Tank stand
+        CTX.fillStyle='#556655'; CTX.fillRect(tx+8, ty+th, 6, 14); CTX.fillRect(tx+tw-14, ty+th, 6, 14);
+        CTX.fillStyle='#446644'; CTX.fillRect(tx+2, ty+th+10, tw-4, 6);
+        // Pipe from tank
+        CTX.strokeStyle='#667766'; CTX.lineWidth=4;
+        CTX.beginPath(); CTX.moveTo(tx+tw/2, ty+th+16); CTX.lineTo(tx+tw/2, h.y+h.h-4); CTX.stroke();
+        CTX.strokeStyle='#88aa88'; CTX.lineWidth=2;
+        CTX.beginPath(); CTX.moveTo(tx+tw/2, ty+th+16); CTX.lineTo(tx+tw/2, h.y+h.h-4); CTX.stroke();
+        // Hazard stripes on right wall (entry side)
+        CTX.save(); CTX.beginPath(); CTX.rect(h.x+h.w-16, h.y+2, 14, h.h-4); CTX.clip();
+        for(let i=0;i<10;i++){
+            CTX.fillStyle=i%2===0?'#221100':'rgba(255,180,0,0.4)';
+            CTX.fillRect(h.x+h.w-16, h.y+2+i*16, 14, 16);
+        }
+        CTX.restore();
+        // Small terminal panel on right
+        CTX.fillStyle='#0a1820'; CTX.fillRect(h.x+h.w-14, h.y+20, 12, 50);
+        for(let i=0;i<4;i++){
+            const on=(tick+i*18)%55<28;
+            CTX.fillStyle=on?'#00ff88':'#0a2018'; CTX.fillRect(h.x+h.w-12, h.y+24+i*11, 8, 8);
+        }
+        CTX.strokeStyle='#005533'; CTX.lineWidth=1; CTX.strokeRect(h.x+h.w-14, h.y+20, 12, 50);
+        break;
+    }
+
+    case 'fuel-b': {
+        // ── Blue cylindrical fuel tank ──
+        const tx=h.x+h.w-80, ty=h.y+30, tw=38, th=90;
+        CTX.fillStyle='#105090'; CTX.fillRect(tx, ty, tw, th);
+        CTX.fillStyle='#2070b0'; CTX.fillRect(tx+6, ty, 6, th);
+        CTX.strokeStyle='#0a3060'; CTX.lineWidth=2;
+        for(let i=0;i<5;i++) CTX.strokeRect(tx, ty+i*16, tw, 16);
+        CTX.fillStyle='#1060a0'; CTX.beginPath(); CTX.arc(tx+tw/2, ty, tw/2, Math.PI, 0); CTX.fill();
+        CTX.strokeStyle='#40aadd'; CTX.lineWidth=1; CTX.beginPath(); CTX.arc(tx+tw/2, ty, tw/2, Math.PI, 0); CTX.stroke();
+        CTX.fillStyle='#556655'; CTX.fillRect(tx+8, ty+th, 6, 14); CTX.fillRect(tx+tw-14, ty+th, 6, 14);
+        CTX.fillStyle='#446644'; CTX.fillRect(tx+2, ty+th+10, tw-4, 6);
+        CTX.strokeStyle='#667766'; CTX.lineWidth=4;
+        CTX.beginPath(); CTX.moveTo(tx+tw/2, ty+th+16); CTX.lineTo(tx+tw/2, h.y+h.h-4); CTX.stroke();
+        CTX.strokeStyle='#88ccee'; CTX.lineWidth=2;
+        CTX.beginPath(); CTX.moveTo(tx+tw/2, ty+th+16); CTX.lineTo(tx+tw/2, h.y+h.h-4); CTX.stroke();
+        // Hazard stripes on left wall
+        CTX.save(); CTX.beginPath(); CTX.rect(h.x+2, h.y+2, 14, h.h-4); CTX.clip();
+        for(let i=0;i<10;i++){
+            CTX.fillStyle=i%2===0?'#001122':'rgba(0,180,255,0.3)';
+            CTX.fillRect(h.x+2, h.y+2+i*16, 14, 16);
+        }
+        CTX.restore();
+        CTX.fillStyle='#0a1820'; CTX.fillRect(h.x+2, h.y+20, 12, 50);
+        for(let i=0;i<4;i++){
+            const on=(tick+i*22)%55<28;
+            CTX.fillStyle=on?'#00ccff':'#001a2a'; CTX.fillRect(h.x+4, h.y+24+i*11, 8, 8);
+        }
+        CTX.strokeStyle='#004466'; CTX.lineWidth=1; CTX.strokeRect(h.x+2, h.y+20, 12, 50);
+        break;
+    }
+
+    case 'landing': {
+        // ── Yellow crosshair target on floor ──
+        const lx=mx, ly=h.y+h.h/2+8;
+        const lp=(Math.sin(tick*0.05)*0.3+0.7);
+        CTX.globalAlpha=lp;
+        CTX.strokeStyle='#ffcc00'; CTX.lineWidth=2;
+        [30,18,8].forEach(r=>{ CTX.beginPath(); CTX.arc(lx,ly,r,0,Math.PI*2); CTX.stroke(); });
+        CTX.strokeStyle='#ffaa00'; CTX.lineWidth=1.5;
+        CTX.beginPath(); CTX.moveTo(lx-36,ly); CTX.lineTo(lx+36,ly); CTX.stroke();
+        CTX.beginPath(); CTX.moveTo(lx,ly-36); CTX.lineTo(lx,ly+36); CTX.stroke();
+        // Corner markers
+        [[lx-24,ly-20],[lx+24,ly-20],[lx-24,ly+20],[lx+24,ly+20]].forEach(([cx,cy])=>{
+            CTX.strokeStyle='#ffcc00'; CTX.lineWidth=2;
+            CTX.beginPath(); CTX.moveTo(cx-5,cy); CTX.lineTo(cx+5,cy); CTX.moveTo(cx,cy-5); CTX.lineTo(cx,cy+5); CTX.stroke();
+        });
+        CTX.globalAlpha=1;
+        // ── Control terminal + red seat ──
+        CTX.fillStyle='#0a1020'; CTX.fillRect(h.x+4, h.y+20, 30, 52);
+        // Screens on terminal
+        [[h.x+6,h.y+24,26,16],[h.x+6,h.y+44,26,16]].forEach(([sx,sy,sw2,sh2])=>{
+            CTX.fillStyle='#040c14'; CTX.fillRect(sx,sy,sw2,sh2);
+            CTX.fillStyle=`rgba(255,${180+Math.round(Math.sin(tick*0.04)*30)},0,0.25)`; CTX.fillRect(sx+1,sy+1,sw2-2,sh2-2);
+            CTX.strokeStyle='#886600'; CTX.lineWidth=1; CTX.strokeRect(sx,sy,sw2,sh2);
+        });
+        CTX.strokeStyle='#446688'; CTX.lineWidth=1; CTX.strokeRect(h.x+4, h.y+20, 30, 52);
+        // Red seat / chair
+        CTX.fillStyle='#881818'; CTX.fillRect(h.x+4, h.y+h.h-30, 24, 18);
+        CTX.fillStyle='#aa2222'; CTX.fillRect(h.x+4, h.y+h.h-30, 24, 6);
+        CTX.fillStyle='#662222'; CTX.fillRect(h.x+4, h.y+h.h-12, 24, 8);
+        CTX.strokeStyle='#440000'; CTX.lineWidth=1;
+        CTX.strokeRect(h.x+4, h.y+h.h-30, 24, 26);
+        break;
+    }
+
+    case 'power-gen': {
+        const pulse = Math.sin(tick * 0.04) * 0.5 + 0.5;
+        const isPower = GAME_STATE.phase === 'power';
+        const surge = isPower ? (Math.sin(tick * 0.09) * 0.5 + 0.5) : 0;
+
+        // Concrete floor overlay
+        CTX.fillStyle = 'rgba(18,12,8,0.55)'; CTX.fillRect(h.x, h.y, h.w, h.h);
+
+        // Conduit pipe along top (below label area)
+        CTX.fillStyle = '#1e1a14'; CTX.fillRect(h.x+4, h.y+18, h.w-8, 10);
+        CTX.shadowColor = isPower ? `rgba(255,${Math.round(90+surge*90)},0,0.8)` : 'rgba(90,60,0,0.4)';
+        CTX.shadowBlur = isPower ? 6+surge*10 : 3;
+        CTX.fillStyle = isPower ? `rgba(255,${Math.round(70+surge*80)},0,0.65)` : 'rgba(90,60,0,0.25)';
+        CTX.fillRect(h.x+6, h.y+20, h.w-12, 6);
+        CTX.shadowBlur = 0;
+
+        // Main power distribution board
+        const bx0 = h.x+18, by0 = h.y+34, bw0 = h.w-76, bh0 = 138;
+        CTX.fillStyle = '#131313'; CTX.fillRect(bx0, by0, bw0, bh0);
+        CTX.strokeStyle = '#2a2a2a'; CTX.lineWidth = 2; CTX.strokeRect(bx0, by0, bw0, bh0);
+        // Header strip
+        CTX.fillStyle = '#1c1408'; CTX.fillRect(bx0, by0, bw0, 10);
+        CTX.fillStyle = isPower ? `rgba(255,${Math.round(100+surge*60)},0,0.6)` : 'rgba(100,70,0,0.3)';
+        CTX.fillRect(bx0+2, by0+2, bw0-4, 6);
+
+        // Circuit breakers: 4 cols × 3 rows
+        const bCols=4, bRows=3;
+        const bBW=Math.floor((bw0-16)/bCols), bBH=Math.floor((bh0-20)/bRows);
+        for (let row=0; row<bRows; row++) {
+            for (let col=0; col<bCols; col++) {
+                const bbx=bx0+8+col*bBW, bby=by0+14+row*bBH;
+                const isTripped = isPower && row===1 && col===2;
+                CTX.fillStyle = '#0c0c0c'; CTX.fillRect(bbx, bby, bBW-4, bBH-4);
+                // indicator light
+                const blink = Math.floor(tick/12)%2===0;
+                CTX.shadowColor = isTripped ? '#ff3300' : '#00dd44';
+                CTX.shadowBlur = isTripped ? 6 : 3;
+                CTX.fillStyle = isTripped ? (blink ? '#ff3300' : '#280000') : '#00aa33';
+                CTX.beginPath(); CTX.arc(bbx+(bBW-4)/2, bby+6, 3.5, 0, Math.PI*2); CTX.fill();
+                CTX.shadowBlur = 0;
+                // switch body
+                CTX.fillStyle = isTripped ? '#2a0808' : '#0a1a10';
+                CTX.fillRect(bbx+5, bby+12, bBW-14, bBH-20);
+                CTX.fillStyle = isTripped ? '#cc2200' : '#33bb55';
+                CTX.fillRect(bbx+7, bby+12, bBW-18, (bBH-20)/2);
+                CTX.strokeStyle = '#1a1a1a'; CTX.lineWidth = 1;
+                CTX.strokeRect(bbx, bby, bBW-4, bBH-4);
+            }
+        }
+
+        // Right side meters
+        const mData = [
+            { lbl:'CPU', pct: isPower ? 0.38+surge*0.35 : 0.32 },
+            { lbl:'MEM', pct: isPower ? 0.46+pulse*0.22 : 0.40 },
+            { lbl:'PWR', pct: isPower ? 0.65+surge*0.28 : 0.58 },
+        ];
+        mData.forEach((m, mi) => {
+            const mx2 = h.x+h.w-56, my2 = h.y+34+mi*58;
+            CTX.fillStyle = '#0e0e0e'; CTX.fillRect(mx2, my2, 48, 50);
+            CTX.fillStyle = '#090c12'; CTX.fillRect(mx2+4, my2+16, 40, 22);
+            const mc = m.pct>0.82 ? '#ff4422' : m.pct>0.62 ? '#ffaa22' : '#22cc66';
+            CTX.shadowColor = mc; CTX.shadowBlur = 4;
+            CTX.fillStyle = mc; CTX.fillRect(mx2+4, my2+16, Math.round(40*m.pct), 22);
+            CTX.shadowBlur = 0;
+            CTX.strokeStyle = '#1a1a1a'; CTX.lineWidth = 1; CTX.strokeRect(mx2+4, my2+16, 40, 22);
+            CTX.fillStyle = '#445544'; CTX.font = '5px monospace'; CTX.textAlign = 'center';
+            CTX.fillText(m.lbl, mx2+24, my2+11);
+            CTX.strokeStyle = '#202020'; CTX.lineWidth = 1; CTX.strokeRect(mx2, my2, 48, 50);
+        });
+
+        // Warning sign bottom-left
+        const wblink = Math.floor(tick/(isPower?9:26))%2===0;
+        CTX.fillStyle = wblink ? '#241400' : '#130c00';
+        CTX.fillRect(h.x+8, h.y+h.h-42, 62, 30);
+        CTX.shadowColor = wblink ? '#ffaa00' : 'transparent';
+        CTX.shadowBlur = wblink ? 8 : 0;
+        CTX.fillStyle = wblink ? '#ffaa00' : '#554400';
+        CTX.font = '5px "Press Start 2P"'; CTX.textAlign = 'center';
+        CTX.fillText('HIGH', h.x+39, h.y+h.h-30);
+        CTX.fillText('VOLTAGE', h.x+39, h.y+h.h-18);
+        CTX.shadowBlur = 0;
+        CTX.strokeStyle = '#332200'; CTX.lineWidth = 1; CTX.strokeRect(h.x+8, h.y+h.h-42, 62, 30);
+        // Hazard chevron
+        CTX.fillStyle = wblink ? '#ffcc00' : '#443300';
+        CTX.font = '8px monospace'; CTX.fillText('⚡', h.x+39, h.y+h.h-42);
+
+        // Left wall conduit lines
+        [[h.x+8,h.y+32,h.x+8,h.y+h.h-10],[h.x+14,h.y+32,h.x+14,h.y+h.h-10]].forEach(([x1,y1,x2,y2])=>{
+            CTX.strokeStyle='rgba(60,45,0,0.5)'; CTX.lineWidth=3;
+            CTX.beginPath(); CTX.moveTo(x1,y1); CTX.lineTo(x2,y2); CTX.stroke();
+        });
+        if (isPower) {
+            CTX.shadowColor = `rgba(255,100,0,${0.3+surge*0.5})`; CTX.shadowBlur = 4;
+            CTX.strokeStyle = `rgba(255,${Math.round(80+surge*60)},0,${0.5+surge*0.4})`; CTX.lineWidth = 1;
+            CTX.beginPath(); CTX.moveTo(h.x+11,h.y+32); CTX.lineTo(h.x+11,h.y+h.h-10); CTX.stroke();
+            CTX.shadowBlur = 0;
+        }
+        break;
+    }
+
+    }
+}
+
+function drawDecorativeRooms() {
+    const t = tick;
+    // Clip all decorative rooms to the hull contour so they follow the ship's shape
+    const _HX1=155,_HX2=995,_HY1=52,_HY2=608,_HXL=58,_HXR=1035;
+    const _HP=[[_HX1,_HY1],[_HX2,_HY1],[_HXR,_HY1+100],[_HXR,_HY2],[_HX2,_HY2+14],[_HX1,_HY2+14],[_HXL,_HY2],[_HXL,_HY1+100]];
+    CTX.save();
+    CTX.beginPath(); _HP.forEach(([x,y],i)=>i===0?CTX.moveTo(x,y):CTX.lineTo(x,y)); CTX.closePath(); CTX.clip();
+
+    // ═══ COMMODORE'S QUARTERS (upper-left) ══════════════════════════
+    const CQ = {x:162, y:82, w:260, h:100};
+    CTX.fillStyle='#0d1f2e'; CTX.fillRect(CQ.x,CQ.y,CQ.w,CQ.h);
+    // Tile floor
+    CTX.strokeStyle='rgba(0,180,220,0.07)'; CTX.lineWidth=1;
+    for(let x=CQ.x;x<CQ.x+CQ.w;x+=16){CTX.beginPath();CTX.moveTo(x,CQ.y);CTX.lineTo(x,CQ.y+CQ.h);CTX.stroke();}
+    for(let y=CQ.y;y<CQ.y+CQ.h;y+=16){CTX.beginPath();CTX.moveTo(CQ.x,y);CTX.lineTo(CQ.x+CQ.w,y);CTX.stroke();}
+    // Captain's desk + command screen
+    CTX.fillStyle='#0a1828'; CTX.fillRect(CQ.x+8, CQ.y+30, 60, 45);
+    CTX.fillStyle='#04090f'; CTX.fillRect(CQ.x+10, CQ.y+33, 56, 30);
+    const tp=(Math.sin(t*0.03)*0.5+0.5);
+    CTX.fillStyle=`rgba(0,${100+Math.round(tp*80)},180,0.4)`; CTX.fillRect(CQ.x+11,CQ.y+34,54,28);
+    // kubectl output Easter egg on screen
+    CTX.fillStyle='rgba(0,200,255,0.7)'; CTX.font='5px monospace'; CTX.textAlign='left';
+    ['$ kubectl get nodes','NAME     STATUS','kube-01  Ready ✓','kube-02  Ready ✓'].forEach((ln,i)=>{
+        CTX.fillStyle=i===0?'rgba(255,200,0,0.8)':'rgba(0,210,255,0.65)';
+        CTX.fillText(ln, CQ.x+13, CQ.y+40+i*7);
+    });
+    CTX.strokeStyle='#00ccff'; CTX.lineWidth=1; CTX.strokeRect(CQ.x+10,CQ.y+33,56,30);
+    // Helm chart logo Easter egg (steering wheel = Helm logo)
+    const hx=CQ.x+100, hy=CQ.y+55;
+    CTX.strokeStyle='rgba(100,200,255,0.5)'; CTX.lineWidth=2;
+    CTX.beginPath(); CTX.arc(hx,hy,18,0,Math.PI*2); CTX.stroke();
+    CTX.beginPath(); CTX.arc(hx,hy,8,0,Math.PI*2); CTX.stroke();
+    for(let a=0;a<6;a++){
+        const ang=a*Math.PI/3;
+        CTX.beginPath(); CTX.moveTo(hx+Math.cos(ang)*8,hy+Math.sin(ang)*8);
+        CTX.lineTo(hx+Math.cos(ang)*18,hy+Math.sin(ang)*18); CTX.stroke();
+        // Spoke knobs
+        CTX.fillStyle='rgba(100,200,255,0.6)';
+        CTX.beginPath(); CTX.arc(hx+Math.cos(ang)*19,hy+Math.sin(ang)*19,2.5,0,Math.PI*2); CTX.fill();
+    }
+    CTX.fillStyle='rgba(0,180,255,0.4)'; CTX.font='4px "Press Start 2P"'; CTX.textAlign='center';
+    CTX.fillText('HELM',hx,hy+2);
+    // Captain's chair (red command chair)
+    CTX.fillStyle='#7a1010'; CTX.fillRect(CQ.x+150,CQ.y+35,36,50);
+    CTX.fillStyle='#aa2020'; CTX.fillRect(CQ.x+150,CQ.y+35,36,12);
+    CTX.fillStyle='#5a0808'; CTX.fillRect(CQ.x+154,CQ.y+82,28,8);
+    CTX.strokeStyle='#440000'; CTX.lineWidth=1; CTX.strokeRect(CQ.x+150,CQ.y+35,36,55);
+    // Armrests
+    CTX.fillStyle='#551515'; CTX.fillRect(CQ.x+146,CQ.y+55,8,18); CTX.fillRect(CQ.x+186,CQ.y+55,8,18);
+    // Star chart on wall (right side of room)
+    CTX.fillStyle='#060e1a'; CTX.fillRect(CQ.x+200,CQ.y+10,60,70);
+    // Star chart content
+    for(let s=0;s<20;s++){
+        const sx=CQ.x+204+(s*13+7)%52, sy=CQ.y+14+(s*17+3)%62;
+        CTX.fillStyle=`rgba(220,230,255,${0.3+Math.random()*0.4})`; CTX.fillRect(sx,sy,1,1);
+    }
+    // Constellation lines
+    CTX.strokeStyle='rgba(0,150,220,0.25)'; CTX.lineWidth=1;
+    [[204,20,218,35],[218,35,240,28],[240,28,252,42],[224,50,238,44],[238,44,250,58]].forEach(([x1,y1,x2,y2])=>{
+        CTX.beginPath(); CTX.moveTo(CQ.x+x1-CQ.x,y1); CTX.lineTo(CQ.x+x2-CQ.x,y2); CTX.stroke();
+    });
+    CTX.strokeStyle='#1a3040'; CTX.lineWidth=1.5; CTX.strokeRect(CQ.x+200,CQ.y+10,60,70);
+    // Room border + label
+    CTX.shadowColor='#ffcc00'; CTX.shadowBlur=8;
+    CTX.strokeStyle='#ffaa00'; CTX.lineWidth=2; CTX.strokeRect(CQ.x,CQ.y,CQ.w,CQ.h);
+    CTX.shadowBlur=0;
+    CTX.fillStyle='#ffcc00'; CTX.font='bold 7px "Press Start 2P"'; CTX.textAlign='center';
+    CTX.fillText("COMMODORE'S QUARTERS", CQ.x+CQ.w/2, CQ.y+10);
+
+    // ═══ SLEEPING QUARTERS A (upper-right) ══════════════════════════
+    const SQA = {x:720, y:75, w:278, h:110};
+    CTX.fillStyle='#0d1a28'; CTX.fillRect(SQA.x,SQA.y,SQA.w,SQA.h);
+    for(let x=SQA.x;x<SQA.x+SQA.w;x+=16){CTX.strokeStyle='rgba(0,180,220,0.06)';CTX.lineWidth=1;CTX.beginPath();CTX.moveTo(x,SQA.y);CTX.lineTo(x,SQA.y+SQA.h);CTX.stroke();}
+    for(let y=SQA.y;y<SQA.y+SQA.h;y+=16){CTX.beginPath();CTX.moveTo(SQA.x,y);CTX.lineTo(SQA.x+SQA.w,y);CTX.stroke();}
+    // 4 bunk beds labeled as Kubernetes Pods
+    [0,1,2,3].forEach(i=>{
+        const bx=SQA.x+12+i*66, by=SQA.y+20;
+        // Lower bunk
+        CTX.fillStyle='#0e2030'; CTX.fillRect(bx,by+36,60,40);
+        CTX.fillStyle='#1a3045'; CTX.fillRect(bx+2,by+38,56,12); // mattress
+        CTX.fillStyle='#243850'; CTX.fillRect(bx+2,by+50,56,10); // blanket
+        // Bunk posts
+        CTX.fillStyle='#334455'; CTX.fillRect(bx,by+20,4,56); CTX.fillRect(bx+56,by+20,4,56);
+        // Upper bunk
+        CTX.fillStyle='#0e2030'; CTX.fillRect(bx,by,60,30);
+        CTX.fillStyle='#1a3045'; CTX.fillRect(bx+2,by+2,56,12);
+        CTX.fillStyle='#243850'; CTX.fillRect(bx+2,by+14,56,10);
+        // Pod label Easter egg
+        const podStatus = i===0 ? {color:'#ff4444',txt:'CrshLp'} : {color:'#44ff88',txt:'Running'};
+        CTX.fillStyle='#0a1422'; CTX.fillRect(bx+4,by+74,52,14);
+        CTX.fillStyle=i===0?'rgba(255,60,60,0.8)':'rgba(60,220,100,0.7)';
+        const blink2=i===0?(Math.sin(t*0.08)*0.5+0.5):1;
+        CTX.globalAlpha=blink2;
+        CTX.font='4px "Press Start 2P"'; CTX.textAlign='center';
+        CTX.fillText(`POD-${i}`,bx+30,by+80);
+        CTX.font='3px monospace'; CTX.fillStyle=podStatus.color; CTX.fillText(podStatus.txt,bx+30,by+86);
+        CTX.globalAlpha=1;
+        CTX.strokeStyle='#1a3040'; CTX.lineWidth=1; CTX.strokeRect(bx,by,60,76);
+    });
+    // "NODE: CREW-01" sign
+    CTX.fillStyle='#081520'; CTX.fillRect(SQA.x+8,SQA.y+SQA.h-15,SQA.w-16,12);
+    CTX.fillStyle='rgba(0,200,255,0.6)'; CTX.font='5px monospace'; CTX.textAlign='center';
+    CTX.fillText('NODE: crew-01  |  NAMESPACE: default  |  REPLICAS: 4/4', SQA.x+SQA.w/2, SQA.y+SQA.h-5);
+    // Room border + label
+    CTX.shadowColor='#4488ff'; CTX.shadowBlur=8;
+    CTX.strokeStyle='#3366cc'; CTX.lineWidth=2; CTX.strokeRect(SQA.x,SQA.y,SQA.w,SQA.h);
+    CTX.shadowBlur=0;
+    CTX.fillStyle='#6699ff'; CTX.font='bold 7px "Press Start 2P"'; CTX.textAlign='center';
+    CTX.fillText("SLEEPING QUARTERS A", SQA.x+SQA.w/2, SQA.y+10);
+
+    // ═══ ELEVATOR (offline/broken) ════════════════════════════════════
+    const ELV = {x:875, y:348, w:160, h:105};
+    // Background
+    CTX.fillStyle='#111827'; CTX.fillRect(ELV.x,ELV.y,ELV.w,ELV.h);
+    // Metal diamond-plate floor
+    CTX.save();
+    CTX.beginPath(); CTX.rect(ELV.x, ELV.y+ELV.h-14, ELV.w, 14); CTX.clip();
+    CTX.fillStyle='#1c2535'; CTX.fillRect(ELV.x,ELV.y+ELV.h-14,ELV.w,14);
+    // Diamond plate: forward diagonals
+    CTX.strokeStyle='rgba(180,200,230,0.18)'; CTX.lineWidth=1;
+    for(let x=ELV.x-14;x<ELV.x+ELV.w+14;x+=6){
+        CTX.beginPath(); CTX.moveTo(x, ELV.y+ELV.h-14); CTX.lineTo(x+14, ELV.y+ELV.h); CTX.stroke();
+    }
+    // Back diagonals (cross-hatch)
+    CTX.strokeStyle='rgba(180,200,230,0.08)'; CTX.lineWidth=1;
+    for(let x=ELV.x+ELV.w+14;x>ELV.x-14;x-=6){
+        CTX.beginPath(); CTX.moveTo(x, ELV.y+ELV.h-14); CTX.lineTo(x-14, ELV.y+ELV.h); CTX.stroke();
+    }
+    // Top highlight edge
+    CTX.fillStyle='rgba(200,220,255,0.2)'; CTX.fillRect(ELV.x, ELV.y+ELV.h-14, ELV.w, 1);
+    // Rivets
+    [ELV.x+6, ELV.x+ELV.w-6].forEach(rx=>{
+        CTX.fillStyle='#253545'; CTX.beginPath(); CTX.arc(rx, ELV.y+ELV.h-7, 2.5, 0, Math.PI*2); CTX.fill();
+        CTX.strokeStyle='rgba(200,220,255,0.25)'; CTX.lineWidth=1; CTX.stroke();
+    });
+    CTX.restore();
+    // Two elevator doors (closed, centre seam)
+    const dcx = ELV.x + ELV.w/2;
+    const dTop = ELV.y+18, dH = ELV.h-34;
+    // Left door
+    CTX.fillStyle='#1e2d3d'; CTX.fillRect(ELV.x+10, dTop, dcx-ELV.x-12, dH);
+    CTX.fillStyle='rgba(80,140,200,0.12)';
+    for(let y=dTop+4;y<dTop+dH-4;y+=12) CTX.fillRect(ELV.x+10, y, dcx-ELV.x-12, 1);
+    CTX.strokeStyle='#2a3d52'; CTX.lineWidth=1; CTX.strokeRect(ELV.x+10, dTop, dcx-ELV.x-12, dH);
+    // Right door
+    CTX.fillStyle='#1e2d3d'; CTX.fillRect(dcx+2, dTop, dcx-ELV.x-12, dH);
+    CTX.fillStyle='rgba(80,140,200,0.12)';
+    for(let y=dTop+4;y<dTop+dH-4;y+=12) CTX.fillRect(dcx+2, y, dcx-ELV.x-12, 1);
+    CTX.strokeStyle='#2a3d52'; CTX.lineWidth=1; CTX.strokeRect(dcx+2, dTop, dcx-ELV.x-12, dH);
+    // Centre seam
+    CTX.strokeStyle='#0d1520'; CTX.lineWidth=2; CTX.beginPath(); CTX.moveTo(dcx,dTop); CTX.lineTo(dcx,dTop+dH); CTX.stroke();
+    // Control panel (right side, small)
+    CTX.fillStyle='#0d1a26'; CTX.fillRect(ELV.x+ELV.w-22,dTop+8,14,32); CTX.strokeStyle='#334455'; CTX.lineWidth=1; CTX.strokeRect(ELV.x+ELV.w-22,dTop+8,14,32);
+    // Buttons — red (offline)
+    [0,1].forEach(i=>{
+        CTX.fillStyle='#3a1010'; CTX.beginPath(); CTX.arc(ELV.x+ELV.w-15,dTop+18+i*12,4,0,Math.PI*2); CTX.fill();
+        CTX.strokeStyle='#551818'; CTX.lineWidth=1; CTX.stroke();
+    });
+    // Offline status light — blinking red using tick
+    const blink = Math.floor(tick/18)%2===0;
+    CTX.fillStyle = blink ? '#ff3300' : '#3a0a00';
+    CTX.beginPath(); CTX.arc(ELV.x+ELV.w-15,dTop+6,3,0,Math.PI*2); CTX.fill();
+    // Floor indicator (dashes = unknown)
+    CTX.fillStyle='#070f18'; CTX.fillRect(ELV.x+10,dTop-1,30,10);
+    CTX.fillStyle='#ff3300'; CTX.font='7px monospace'; CTX.textAlign='center';
+    CTX.fillText('--', ELV.x+25, dTop+7);
+    // Label
+    CTX.shadowColor='#445566'; CTX.shadowBlur=6;
+    CTX.strokeStyle='#556677'; CTX.lineWidth=2; CTX.strokeRect(ELV.x,ELV.y,ELV.w,ELV.h);
+    CTX.shadowBlur=0;
+    CTX.fillStyle='#778899'; CTX.font='bold 7px "Press Start 2P"'; CTX.textAlign='center';
+    CTX.fillText('ELEVATOR', ELV.x+ELV.w/2, ELV.y+10);
+    // Offline tag
+    CTX.fillStyle='#ff4422'; CTX.font='5px "Press Start 2P"'; CTX.fillText('OFFLINE', ELV.x+ELV.w/2, ELV.y+ELV.h-17);
+    CTX.restore(); // end hull clip
+}
+
+function drawShip() {
+    tick++;
+
+    // ── Background (dark purple-slate, matches reference) ──────────
+    CTX.fillStyle = '#1a1825'; CTX.fillRect(0, 0, 1150, 650);
+
+    // ── Ship hull polygon (octagonal — angled top corners) ──────────
+    const HX1=155, HX2=995, HY1=52, HY2=608, HXL=58, HXR=1035;
+    const HULL_PTS = [[HX1,HY1],[HX2,HY1],[HXR,HY1+100],[HXR,HY2],[HX2,HY2+14],[HX1,HY2+14],[HXL,HY2],[HXL,HY1+100]];
+
+    // Hull interior fill
+    CTX.beginPath();
+    HULL_PTS.forEach(([x,y],i)=>i===0?CTX.moveTo(x,y):CTX.lineTo(x,y));
+    CTX.closePath(); CTX.fillStyle='#111828'; CTX.fill();
+
+    // ── Floor tile grid (clipped to hull) ───────────────────────────
+    CTX.save();
+    CTX.beginPath();
+    HULL_PTS.forEach(([x,y],i)=>i===0?CTX.moveTo(x,y):CTX.lineTo(x,y));
+    CTX.closePath(); CTX.clip();
+    const TILE=22;
+    CTX.strokeStyle='rgba(0,180,220,0.07)'; CTX.lineWidth=1;
+    for(let x=58;x<=1035;x+=TILE){CTX.beginPath();CTX.moveTo(x,52);CTX.lineTo(x,622);CTX.stroke();}
+    for(let y=52;y<=622;y+=TILE){CTX.beginPath();CTX.moveTo(58,y);CTX.lineTo(1035,y);CTX.stroke();}
+    CTX.restore();
+
+    // ── Metal deck-plate corridors ─────────────────────────────────
+    // Corridor zones: [x, y, w, h]
+    const _CORR=[
+        [388,65,74,540],[710,65,165,540],          // left & right spines
+        [462,195,226,60],[442,385,266,65],          // center cross gaps
+        [228,65,160,540],[875,65,160,540],          // left & right transverse
+    ];
+    const _PL=24; // plate tile size
+    _CORR.forEach(([cx,cy,cw,ch])=>{
+        CTX.save();
+        CTX.beginPath(); CTX.rect(cx,cy,cw,ch); CTX.clip();
+        // Metallic base coat
+        CTX.fillStyle='rgba(55,70,90,0.20)'; CTX.fillRect(cx,cy,cw,ch);
+        // Checker-plate panels (alternating dark/light steel)
+        const ox=Math.floor(cx/_PL)*_PL, oy=Math.floor(cy/_PL)*_PL;
+        for(let px=ox;px<cx+cw;px+=_PL){
+            for(let py=oy;py<cy+ch;py+=_PL){
+                const alt=((Math.floor(px/_PL)+Math.floor(py/_PL))%2===0);
+                CTX.fillStyle=alt?'rgba(140,155,175,0.07)':'rgba(30,45,65,0.05)';
+                CTX.fillRect(px,py,_PL,_PL);
+            }
+        }
+        // Panel seam lines
+        CTX.strokeStyle='rgba(160,180,210,0.13)'; CTX.lineWidth=0.5;
+        for(let px=ox;px<=cx+cw;px+=_PL){
+            CTX.beginPath(); CTX.moveTo(px,cy); CTX.lineTo(px,cy+ch); CTX.stroke();
+        }
+        for(let py=oy;py<=cy+ch;py+=_PL){
+            CTX.beginPath(); CTX.moveTo(cx,py); CTX.lineTo(cx+cw,py); CTX.stroke();
+        }
+        // Rivet dots at plate corners
+        CTX.fillStyle='rgba(190,205,225,0.28)';
+        for(let px=ox;px<=cx+cw;px+=_PL)
+            for(let py=oy;py<=cy+ch;py+=_PL)
+                CTX.fillRect(px-1,py-1,2,2);
+        CTX.restore();
+    });
+
+    // ── Metal edge beading (structural border along corridor walls) ──
+    CTX.shadowColor='rgba(130,180,220,0.5)'; CTX.shadowBlur=4;
+    CTX.strokeStyle='rgba(130,175,215,0.50)'; CTX.lineWidth=2;
+    // Left spine
+    CTX.beginPath(); CTX.moveTo(388,65);  CTX.lineTo(388,605); CTX.stroke();
+    CTX.beginPath(); CTX.moveTo(462,65);  CTX.lineTo(462,195); CTX.stroke();
+    CTX.beginPath(); CTX.moveTo(462,255); CTX.lineTo(462,385); CTX.stroke();
+    CTX.beginPath(); CTX.moveTo(442,450); CTX.lineTo(442,605); CTX.stroke();
+    // Right spine
+    CTX.beginPath(); CTX.moveTo(710,65);  CTX.lineTo(710,195); CTX.stroke();
+    CTX.beginPath(); CTX.moveTo(710,255); CTX.lineTo(710,385); CTX.stroke();
+    CTX.beginPath(); CTX.moveTo(710,450); CTX.lineTo(710,605); CTX.stroke();
+    CTX.beginPath(); CTX.moveTo(1035,185); CTX.lineTo(1035,348); CTX.stroke();
+    CTX.beginPath(); CTX.moveTo(1035,453); CTX.lineTo(1035,585); CTX.stroke();
+    // Cross corridors
+    CTX.beginPath(); CTX.moveTo(388,195); CTX.lineTo(710,195); CTX.stroke();
+    CTX.beginPath(); CTX.moveTo(388,255); CTX.lineTo(710,255); CTX.stroke();
+    CTX.beginPath(); CTX.moveTo(388,385); CTX.lineTo(710,385); CTX.stroke();
+    CTX.beginPath(); CTX.moveTo(388,450); CTX.lineTo(710,450); CTX.stroke();
+    CTX.beginPath(); CTX.moveTo(228,65);  CTX.lineTo(228,605); CTX.stroke();
+    CTX.shadowBlur=0;
+
+    // ── Panel seam midlines (structural, not road stripes) ───────────
+    CTX.strokeStyle='rgba(110,140,170,0.20)'; CTX.lineWidth=1;
+    // Left spine mid seam
+    CTX.beginPath(); CTX.moveTo(425,65);  CTX.lineTo(425,605); CTX.stroke();
+    // Upper cross mid seam
+    CTX.beginPath(); CTX.moveTo(388,225); CTX.lineTo(710,225); CTX.stroke();
+    // Lower cross mid seam
+    CTX.beginPath(); CTX.moveTo(388,417); CTX.lineTo(710,417); CTX.stroke();
+    // Right transverse mid seam
+    CTX.beginPath(); CTX.moveTo(793,65);  CTX.lineTo(793,605); CTX.stroke();
+    // Left transverse mid seam
+    CTX.beginPath(); CTX.moveTo(308,65);  CTX.lineTo(308,605); CTX.stroke();
+
+    // ── Junction crosses (deck-plate structural marks at intersections)
+    CTX.strokeStyle='rgba(160,190,220,0.35)'; CTX.lineWidth=1.5;
+    [[425,195],[425,255],[425,385],[425,450],
+     [793,195],[793,345],[793,455],[308,270],[308,418]].forEach(([jx,jy])=>{
+        CTX.beginPath();
+        CTX.moveTo(jx-7,jy); CTX.lineTo(jx+7,jy);
+        CTX.moveTo(jx,jy-7); CTX.lineTo(jx,jy+7);
+        CTX.stroke();
+        CTX.fillStyle='rgba(180,210,240,0.35)';
+        CTX.fillRect(jx-2,jy-2,4,4);
+    });
+
+    // ── Doorway thresholds (glowing entry strips at each room) ───────
+    // Main-computer bottom door
+    CTX.fillStyle='rgba(0,180,255,0.32)'; CTX.fillRect(462,188,226,7);
+    // Nav top and bottom doors
+    CTX.fillStyle='rgba(0,180,255,0.25)'; CTX.fillRect(462,248,226,7); CTX.fillRect(462,385,226,7);
+    // Engine bay top door
+    CTX.fillStyle='rgba(255,80,0,0.30)';  CTX.fillRect(442,443,266,7);
+    // Fuel-a doorway (gap at y:240-300, right side x:228)
+    CTX.fillStyle='rgba(0,200,255,0.30)'; CTX.fillRect(222,240,8,60);
+    // Fuel-b doorway (gap at y:240-300, left side x:875)
+    CTX.fillRect(875,240,8,60);
+    // Landing doorway (left side x:875, y:490-540)
+    CTX.fillStyle='rgba(255,200,0,0.30)'; CTX.fillRect(875,490,8,50);
+
+    // ── Room wall outlines — double-stroke: thick body + bright neon face ──
+    function wallSegs(segs, color, glowColor) {
+        // Pass 1: dark thick body (gives physical thickness)
+        CTX.shadowBlur=0; CTX.strokeStyle='rgba(0,0,0,0.7)'; CTX.lineWidth=6;
+        segs.forEach(([x1,y1,x2,y2])=>{CTX.beginPath();CTX.moveTo(x1,y1);CTX.lineTo(x2,y2);CTX.stroke();});
+        // Pass 2: mid color fill
+        CTX.strokeStyle=color+'88'; CTX.lineWidth=4;
+        segs.forEach(([x1,y1,x2,y2])=>{CTX.beginPath();CTX.moveTo(x1,y1);CTX.lineTo(x2,y2);CTX.stroke();});
+        // Pass 3: bright neon face with glow
+        CTX.shadowColor=glowColor; CTX.shadowBlur=18;
+        CTX.strokeStyle=color; CTX.lineWidth=2;
+        segs.forEach(([x1,y1,x2,y2])=>{CTX.beginPath();CTX.moveTo(x1,y1);CTX.lineTo(x2,y2);CTX.stroke();});
+        // Pass 4: thin bright highlight on top
+        CTX.shadowBlur=4; CTX.strokeStyle='#eeffff'; CTX.lineWidth=0.5;
+        segs.forEach(([x1,y1,x2,y2])=>{CTX.beginPath();CTX.moveTo(x1,y1);CTX.lineTo(x2,y2);CTX.stroke();});
+        CTX.shadowBlur=0;
+    }
+
+    // Center column walls (cyan)
+    wallSegs([
+        [462,65,688,65],[462,195,688,195],[462,255,688,255],
+        [462,385,688,385],[442,450,712,450],
+        [462,65,462,195],[462,255,462,385],[442,450,442,605],
+        [688,65,688,195],[688,255,688,385],[712,450,712,605],
+    ], '#00ccff', '#00aadd');
+
+    // Fuel-a walls — top, bottom, far-left, right wall split at doorway y:240-300
+    wallSegs([
+        [65,185,228,185],[65,345,228,345],
+        [65,185,65,345],
+        [228,185,228,240],[228,300,228,345],
+    ], '#00ccff', '#00aadd');
+
+    // Fuel-b walls — top, bottom, far-right, left wall split at doorway y:240-300
+    wallSegs([
+        [875,185,1035,185],[875,345,1035,345],
+        [1035,185,1035,345],
+        [875,185,875,240],[875,300,875,345],
+    ], '#00ccff', '#00aadd');
+
+    // Landing walls — yellow, doorway gap at y:490-540
+    wallSegs([
+        [875,455,1035,455],[875,585,1035,585],
+        [1035,455,1035,585],
+        [875,455,875,490],[875,540,875,585],
+    ], '#ffcc00', '#cc9900');
+
+    // ── Hull border (bright cyan neon glow) ──────────────────────────
+    CTX.shadowColor='#00ccff'; CTX.shadowBlur=22;
+    CTX.strokeStyle='#00ccff'; CTX.lineWidth=3;
+    CTX.beginPath();
+    HULL_PTS.forEach(([x,y],i)=>i===0?CTX.moveTo(x,y):CTX.lineTo(x,y));
+    CTX.closePath(); CTX.stroke();
+    // Inner bright accent line
+    CTX.shadowBlur=4; CTX.strokeStyle='#88eeff'; CTX.lineWidth=1;
+    CTX.beginPath();
+    HULL_PTS.forEach(([x,y],i)=>{
+        const ox=x<575?4:-4, oy=y<337?4:-4;
+        i===0?CTX.moveTo(x+ox,y+oy):CTX.lineTo(x+ox,y+oy);
+    });
+    CTX.closePath(); CTX.stroke();
+    CTX.shadowBlur=0;
+
+    // ── Engine conduit pipes (connect nacelles inside to exhausts outside) ─
+    [513, 637].forEach((ex,i) => {
+        // Pipe running from engine room bottom (y:600) through hull wall to exhaust
+        CTX.fillStyle='#2a2040'; CTX.fillRect(ex-8,592,16,30); // pipe through hull
+        CTX.fillStyle='#1a1530'; CTX.fillRect(ex-5,592,10,30); // inner bore
+        // Metallic pipe collar at hull boundary
+        CTX.fillStyle='#3a3050'; CTX.fillRect(ex-10,606,20,6);
+        CTX.strokeStyle='#6a5080'; CTX.lineWidth=1;
+        CTX.strokeRect(ex-10,606,20,6);
+        // Glowing heat seep through pipe
+        const pp=(Math.sin(tick*0.07+i*1.5)*0.5+0.5);
+        CTX.fillStyle=`rgba(${Math.round(180+pp*60)},${Math.round(50+pp*50)},0,${0.3+pp*0.3})`;
+        CTX.fillRect(ex-4,594,8,28);
+    });
+
+    // ── Engine exhausts sticking out the back (below hull) ──────────
+    [513, 637].forEach((ex,i) => {
+        const pulse=(Math.sin(tick*0.07+i*1.5)*0.5+0.5);
+        // Exhaust tunnel extending below hull
+        CTX.fillStyle='#2a2040'; CTX.fillRect(ex-20, 608, 40, 32);
+        CTX.fillStyle='#1a1530'; CTX.fillRect(ex-15, 622, 30, 22);
+        // Ribbed nacelle tail segments
+        CTX.strokeStyle='#3a3050'; CTX.lineWidth=1.5;
+        [0,9,18].forEach(ry=>CTX.strokeRect(ex-20, 608+ry, 40, 9));
+        // Outer nozzle flare
+        CTX.fillStyle='#3a3050';
+        CTX.beginPath(); CTX.moveTo(ex-24,622); CTX.lineTo(ex+24,622); CTX.lineTo(ex+18,644); CTX.lineTo(ex-18,644); CTX.closePath(); CTX.fill();
+        CTX.strokeStyle='#6a5080'; CTX.lineWidth=1.5;
+        CTX.beginPath(); CTX.moveTo(ex-24,622); CTX.lineTo(ex+24,622); CTX.lineTo(ex+18,644); CTX.lineTo(ex-18,644); CTX.closePath(); CTX.stroke();
+        // Glowing exhaust cone
+        const rv=Math.round(220+pulse*35), gv=Math.round(60+pulse*80);
+        CTX.shadowColor=`rgb(${rv},${gv},0)`; CTX.shadowBlur=20+pulse*16;
+        CTX.fillStyle=`rgba(${rv},${gv},0,0.85)`;
+        CTX.beginPath(); CTX.ellipse(ex, 644, 14+pulse*5, 6+pulse*3, 0, 0, Math.PI*2); CTX.fill();
+        // Inner hot core
+        CTX.fillStyle=`rgba(255,${200+Math.round(pulse*55)},100,0.9)`;
+        CTX.beginPath(); CTX.ellipse(ex, 644, 6+pulse*2, 3+pulse, 0, 0, Math.PI*2); CTX.fill();
+        CTX.shadowBlur=0;
+        // Nozzle ring
+        CTX.strokeStyle='#554400'; CTX.lineWidth=2;
+        CTX.beginPath(); CTX.ellipse(ex, 636, 18, 5, 0, 0, Math.PI*2); CTX.stroke();
+    });
+
+    // ── Porthole windows along hull edges ───────────────────────────
+    // Large front windows (top edge)
+    [[200,52],[370,52],[540,52],[710,52],[880,52]].forEach(([px,py])=>drawPortholeLarge(px,py));
+    // Side portholes (small)
+    [[58,200],[58,370],[58,520],[1035,220],[1035,385]].forEach(([px,py])=>drawPorthole(px,py));
+
+    // ── Decorative rooms (no gameplay, visual only) ─────────────────
+    drawDecorativeRooms();
+
+    // ── Sparks (power surge effect) ──────────────────────────────────
+    for (let i = SPARKS.length-1; i >= 0; i--) {
+        const sp = SPARKS[i];
+        sp.x += sp.vx; sp.y += sp.vy; sp.vy += 0.35; sp.life -= sp.decay;
+        if (sp.life <= 0) { SPARKS.splice(i,1); continue; }
+        CTX.globalAlpha = sp.life;
+        CTX.shadowColor = sp.color; CTX.shadowBlur = 4;
+        CTX.fillStyle = sp.color; CTX.fillRect(sp.x, sp.y, 3, 3);
+        CTX.globalAlpha = 1; CTX.shadowBlur = 0;
+    }
+
+    // ── Room fills + interiors ───────────────────────────────────────
+    HOTSPOTS.forEach(h => {
+        const isNear = nearHotspot && nearHotspot.id === h.id;
+
+        if (!h.decorative) {
+            // Room fill
+            CTX.fillStyle = h.fill; CTX.fillRect(h.x, h.y, h.w, h.h);
+
+            // Interior
+            drawRoomInterior(h);
+
+            // Room label
+            CTX.shadowColor='rgba(0,0,0,0.9)'; CTX.shadowBlur=5;
+            CTX.fillStyle   = isNear ? '#ffffff' : '#99ddee';
+            CTX.font        = 'bold 8px "Press Start 2P"';
+            CTX.textAlign   = 'center';
+            CTX.fillText(h.name, h.x+h.w/2, h.y+11);
+            CTX.shadowBlur  = 0;
+        }
+
+        // Room border (neon glow) — drawn for all rooms
+        CTX.shadowColor = isNear ? '#ffffff' : h.border;
+        CTX.shadowBlur  = isNear ? 18 : 10;
+        CTX.strokeStyle = isNear ? '#ffffff' : h.border;
+        CTX.lineWidth   = isNear ? 3 : 2;
+        CTX.strokeRect(h.x, h.y, h.w, h.h);
+        CTX.shadowBlur  = 0;
+
+        // [E] INTERACT prompt when near
+        if (isNear) {
+            CTX.globalAlpha = 0.7+0.3*Math.sin(tick*0.09);
+            CTX.fillStyle='#ffcc00'; CTX.shadowColor='#ffaa00'; CTX.shadowBlur=8;
+            CTX.font='7px "Press Start 2P"'; CTX.textAlign='center';
+            CTX.fillText('[E] INTERACT', h.x+h.w/2, h.y+h.h-5);
+            CTX.shadowBlur=0; CTX.globalAlpha=1;
+        }
+    });
+
+    drawPlayer();
+}
+
+// Offscreen canvas for player sprite (reused each frame)
+let _POC = null, _POCTX = null;
+
+function drawPlayer() {
+    if (!_POC) {
+        _POC = document.createElement('canvas');
+        _POC.width = 48; _POC.height = 90;
+        _POCTX = _POC.getContext('2d');
+    }
+    const OX=24, OY=56;
+    _POCTX.clearRect(0,0,48,90);
+    _POCTX.save();
+    _POCTX.translate(OX, OY);
+    _POCTX.scale(0.7, 0.7);
+
+    const pulse = Math.sin(tick*0.055)*0.5+0.5;
+    const ca = Math.round(170+pulse*85);
+    const o = _POCTX;
+    const cy = (a=0.9) => `rgba(0,${ca},220,${a})`;
+
+    // ── BOOTS ────────────────────────────────────────────
+    o.fillStyle='#090C12'; o.fillRect(-13,34,11,7);  o.fillRect(2,34,11,7);
+    o.fillStyle='#06080D'; o.fillRect(-14,36,12,5);  o.fillRect(2,36,12,5);
+    o.fillStyle='#121C28'; o.fillRect(-13,34,11,3);  o.fillRect(2,34,11,3);
+    o.fillStyle='#050810'; o.fillRect(-13,38,11,2);  o.fillRect(2,38,11,2);
+    o.shadowColor=cy(); o.shadowBlur=4;
+    o.fillStyle=cy(0.7); o.fillRect(-11,40,3,1); o.fillRect(-7,40,2,1);
+    o.fillStyle=cy(0.7); o.fillRect(4,40,3,1);   o.fillRect(8,40,2,1);
+    o.shadowBlur=0;
+
+    // ── CALVES ───────────────────────────────────────────
+    o.fillStyle='#0D1620'; o.fillRect(-13,27,11,9);  o.fillRect(2,27,11,9);
+    o.fillStyle='#0A1018'; o.fillRect(-13,27,11,3);  o.fillRect(2,27,11,3);
+    o.fillStyle='#172434'; o.fillRect(-13,27,2,9);   o.fillRect(10,27,2,9);
+    o.fillStyle='#050C14'; o.fillRect(-13,33,11,2);  o.fillRect(2,33,11,2);
+    o.shadowColor=cy(); o.shadowBlur=3;
+    o.fillStyle=cy(0.6); o.fillRect(-11,30,5,1); o.fillRect(5,30,5,1);
+    o.shadowBlur=0;
+
+    // ── KNEE PADS ────────────────────────────────────────
+    o.fillStyle='#0C1522'; o.fillRect(-13,23,11,6);  o.fillRect(2,23,11,6);
+    o.fillStyle='#1A2A3A'; o.fillRect(-13,23,11,2);  o.fillRect(2,23,11,2);
+    o.fillStyle='#060E18'; o.fillRect(-13,27,11,1);  o.fillRect(2,27,11,1);
+
+    // ── THIGHS ───────────────────────────────────────────
+    o.fillStyle='#0F1A26'; o.fillRect(-13,15,11,10); o.fillRect(2,15,11,10);
+    o.fillStyle='#182638'; o.fillRect(-13,15,11,3);  o.fillRect(2,15,11,3);
+    o.fillStyle='#090F18'; o.fillRect(-13,15,2,10);  o.fillRect(10,15,2,10);
+    o.fillStyle='#0A1020'; o.fillRect(-13,20,11,2);  o.fillRect(2,20,11,2);
+
+    // ── BELT ─────────────────────────────────────────────
+    o.fillStyle='#0C1018'; o.fillRect(-14,11,28,5);
+    o.fillStyle='#080C14'; o.fillRect(-14,12,28,2);
+    o.fillStyle='#0E1826'; o.fillRect(-14,11,6,5); o.fillRect(8,11,6,5);
+    o.fillStyle='#1C2C3C'; o.fillRect(-3,10,6,6);
+    o.fillStyle='#101C2A'; o.fillRect(-2,11,4,4);
+    o.shadowColor=cy(); o.shadowBlur=5;
+    o.fillStyle=cy(0.7); o.fillRect(-1,12,3,2);
+    o.shadowBlur=0;
+
+    // ── TORSO (long) ──────────────────────────────────────
+    o.fillStyle='#0D1C2E'; o.fillRect(-14,-2,28,15);
+    o.fillStyle='#091526'; o.fillRect(-11,-1,22,12);
+    o.fillStyle='#162636'; o.fillRect(-11,-1,22,3);
+    o.fillStyle='#060F1C'; o.fillRect(-11,6,22,2);
+    o.fillStyle='#07101C'; o.fillRect(-4,-2,3,15); o.fillRect(1,-2,3,15);
+    o.fillStyle='#07101C'; o.fillRect(-14,3,28,3);
+    o.shadowColor=cy(); o.shadowBlur=7;
+    o.fillStyle=cy(0.8); o.fillRect(-9,0,18,2);
+    o.fillStyle=cy(0.55); o.fillRect(-7,5,14,2);
+    o.shadowBlur=0;
+    o.fillStyle='#1E2E3E';
+    o.fillRect(-13,-2,2,2); o.fillRect(11,-2,2,2);
+    o.fillRect(-13,11,2,2); o.fillRect(11,11,2,2);
+
+    // ── UPPER CHEST / COLLAR BRIDGE ───────────────────────
+    o.fillStyle='#0C1828'; o.fillRect(-12,-16,24,16);
+    o.fillStyle='#07101C'; o.fillRect(-12,-8,24,2);
+    o.shadowColor=cy(); o.shadowBlur=5;
+    o.fillStyle=cy(0.5); o.fillRect(-9,-12,18,2);
+    o.shadowBlur=0;
+
+    // ── UPPER ARMS (short) ────────────────────────────────
+    o.fillStyle='#0C1A2A'; o.fillRect(-24,-14,9,18); o.fillRect(15,-14,9,18);
+    o.fillStyle='#08101E'; o.fillRect(-24,-14,9,3);  o.fillRect(15,-14,9,3);
+    o.fillStyle='#172436'; o.fillRect(-24,-14,2,18);
+    o.fillStyle='#061018'; o.fillRect(22,-14,2,18);
+    o.fillStyle='#06101A'; o.fillRect(-24,-6,9,2);   o.fillRect(15,-6,9,2);
+
+    // ── SHOULDER PAULDRONS ───────────────────────────────
+    o.fillStyle='#0E1E30'; o.fillRect(-26,-20,14,12); o.fillRect(12,-20,14,12);
+    o.fillStyle='#07101E'; o.fillRect(-28,-18,3,8);   o.fillRect(25,-18,3,8);
+    o.fillStyle='#1A2E44'; o.fillRect(-26,-20,14,3);  o.fillRect(12,-20,14,3);
+    o.fillStyle='#07101A'; o.fillRect(-26,-11,14,2);  o.fillRect(12,-11,14,2);
+    o.shadowColor=cy(); o.shadowBlur=5;
+    o.fillStyle=cy(0.8);
+    o.fillRect(-23,-15,3,2); o.fillRect(-18,-15,3,2);
+    o.fillRect(13,-15,3,2);  o.fillRect(18,-15,3,2);
+    o.shadowBlur=0;
+
+    // ── FOREARMS (short) ──────────────────────────────────
+    o.fillStyle='#0B1826'; o.fillRect(-23,4,9,12);  o.fillRect(14,4,9,12);
+    o.fillStyle='#07101C'; o.fillRect(-23,4,9,3);   o.fillRect(14,4,9,3);
+    o.fillStyle='#06101A'; o.fillRect(-23,13,9,2);  o.fillRect(14,13,9,2);
+    o.shadowColor=cy(); o.shadowBlur=6;
+    o.fillStyle=cy(0.75); o.fillRect(-21,7,5,4);    o.fillRect(16,7,5,4);
+    o.shadowBlur=0;
+
+    // ── GAUNTLETS ────────────────────────────────────────
+    o.fillStyle='#090D18'; o.fillRect(-23,14,9,8);  o.fillRect(14,14,9,8);
+    o.fillStyle='#141E2C'; o.fillRect(-23,14,9,3);  o.fillRect(14,14,9,3);
+    o.fillStyle='#080C14';
+    o.fillRect(-22,20,2,2); o.fillRect(-19,20,2,2); o.fillRect(-16,20,2,2);
+    o.fillRect(15,20,2,2);  o.fillRect(18,20,2,2);  o.fillRect(21,20,2,2);
+
+    // ── RADIO PACK ───────────────────────────────────────
+    o.fillStyle='#0C1A28'; o.fillRect(20,-18,7,18);
+    o.fillStyle='#162434'; o.fillRect(20,-18,7,3);
+    o.fillStyle='#07101A'; o.fillRect(20,-9,7,2);
+    o.shadowColor=cy(); o.shadowBlur=4;
+    o.fillStyle=cy(0.6); o.fillRect(22,-14,3,4);
+    o.shadowBlur=0;
+
+    // ── COLLAR RINGS ─────────────────────────────────────
+    for(let i=0;i<3;i++){
+        o.fillStyle=i%2===0?'#0E1C32':'#091424';
+        o.fillRect(-10,-20+i*3,20,3);
+        o.fillStyle='#182E46'; o.fillRect(-10,-20+i*3,20,1);
+        o.fillStyle='#04080F'; o.fillRect(-10,-18+i*3,20,1);
+    }
+    o.shadowColor=cy(); o.shadowBlur=4;
+    o.fillStyle=cy(0.6); o.fillRect(-10,-12,20,1);
+    o.shadowBlur=0;
+
+    // ── HELMET (round ellipse dome) ───────────────────────
+    o.fillStyle='#0C1828';
+    o.beginPath();
+    o.moveTo(-16,-22);
+    o.lineTo(-16,-38);
+    o.ellipse(0,-38,16,20,0,Math.PI,0,true);
+    o.lineTo(16,-22);
+    o.closePath();
+    o.fill();
+    // Inner dome highlight ring
+    o.strokeStyle='#1A3050'; o.lineWidth=1;
+    o.beginPath();
+    o.moveTo(-14,-23);
+    o.lineTo(-14,-38);
+    o.ellipse(0,-38,14,18,0,Math.PI,0,true);
+    o.lineTo(14,-23);
+    o.stroke();
+    // Side wings
+    o.fillStyle='#07101A';
+    o.fillRect(-20,-36,5,18); o.fillRect(15,-36,5,18);
+    // Panel seams
+    o.fillStyle='#050C16';
+    o.fillRect(-16,-32,32,2); o.fillRect(-16,-26,32,2);
+    o.fillRect(-6,-55,2,35);  o.fillRect(4,-55,2,35);
+    // Wing bevel
+    o.fillStyle='#13243C';
+    o.fillRect(-20,-36,1,18); o.fillRect(19,-36,1,18);
+    // Side glow dots
+    o.shadowColor=cy(); o.shadowBlur=6;
+    o.fillStyle=cy(0.9);
+    o.fillRect(-19,-32,2,2); o.fillRect(-19,-26,2,2);
+    o.fillRect(17,-32,2,2);  o.fillRect(17,-26,2,2);
+    o.shadowBlur=0;
+
+    // ── VISOR ────────────────────────────────────────────
+    o.fillStyle='#030508'; o.fillRect(-14,-44,28,22);
+    o.fillStyle='#04060C'; o.fillRect(-12,-42,24,18);
+    o.fillStyle='rgba(20,8,48,0.42)'; o.fillRect(-12,-42,24,18);
+    o.fillStyle='#0A1828';
+    o.fillRect(-14,-44,2,2); o.fillRect(12,-44,2,2);
+    o.fillRect(-14,-24,2,2); o.fillRect(12,-24,2,2);
+    o.fillStyle='rgba(16,38,80,0.26)'; o.fillRect(2,-41,7,9);
+    o.shadowColor=cy(0.5); o.shadowBlur=10;
+    o.strokeStyle=`rgba(0,${Math.round(ca*0.5)},190,0.6)`; o.lineWidth=1;
+    o.strokeRect(-14,-44,28,22);
+    o.shadowBlur=0;
+
+    // ── HUD ──────────────────────────────────────────────
+    o.fillStyle='#00DD55';
+    o.fillRect(-1,-34,2,1); o.fillRect(-2,-33,1,1);
+    o.fillRect( 1,-33,1,1); o.fillRect(-1,-32,2,1);
+    o.fillStyle='rgba(0,170,60,0.42)';
+    o.fillRect(-6,-33,2,1); o.fillRect(4,-33,2,1);
+    o.fillStyle='rgba(0,200,80,0.55)';
+    o.fillRect(-11,-41,6,1); o.fillRect(-11,-39,5,1); o.fillRect(-11,-37,7,1);
+    o.fillRect( 5,-41,5,1); o.fillRect( 6,-39,4,1);
+    o.fillRect(-11,-27,7,1); o.fillRect(3,-27,7,1);
+
+    // ── ANTENNAS ─────────────────────────────────────────
+    o.fillStyle='#0E1E34'; o.fillRect(-18,-48,2,10);
+    o.fillStyle='#0C1A2E'; o.fillRect(-18,-54,2,8);
+    o.shadowColor=cy(); o.shadowBlur=6;
+    o.fillStyle=cy(1.0); o.fillRect(-19,-57,3,4);
+    o.shadowBlur=0;
+    o.fillStyle='#0C1828'; o.fillRect(15,-52,2,14);
+    o.fillStyle='#0A1422'; o.fillRect(15,-56,2,6);
+
+    o.restore();
+
+    // Ground shadow
+    CTX.save();
+    CTX.translate(player.x+16, player.y+16);
+    CTX.fillStyle='rgba(0,0,0,0.35)';
+    CTX.beginPath(); CTX.ellipse(0,29,11,3,0,0,Math.PI*2); CTX.fill();
+    CTX.restore();
+
+    // Blit with crisp 1-px outline
+    CTX.save();
+    CTX.filter = [
+        'drop-shadow(1px 0 0 rgba(210,235,255,0.85))',
+        'drop-shadow(-1px 0 0 rgba(210,235,255,0.85))',
+        'drop-shadow(0 1px 0 rgba(210,235,255,0.85))',
+        'drop-shadow(0 -1px 0 rgba(210,235,255,0.85))'
+    ].join(' ');
+    CTX.drawImage(_POC, player.x+16-OX, player.y+16-OY);
+    CTX.filter = 'none';
+    CTX.restore();
+}
+
+// ── Instruction overlay ───────────────────────────────────────────
+function drawInstructionOverlay() {
+    const CW=1150, CH=650;
+    CTX.fillStyle='rgba(1,4,16,0.86)'; CTX.fillRect(0,0,CW,CH);
+
+    const pw=470, ph=380, px=(CW-pw)/2, py=(CH-ph)/2;
+
+    // Panel background
+    const bg=CTX.createLinearGradient(px,py,px,py+ph);
+    bg.addColorStop(0,'#0c1a38'); bg.addColorStop(1,'#050c1e');
+    CTX.fillStyle=bg; CTX.fillRect(px,py,pw,ph);
+
+    // Top + bottom accent lines
+    const tg=CTX.createLinearGradient(px,py,px+pw,py);
+    tg.addColorStop(0,'transparent'); tg.addColorStop(0.5,'#00aaff'); tg.addColorStop(1,'transparent');
+    CTX.fillStyle=tg; CTX.fillRect(px,py,pw,2);
+    const bg2=CTX.createLinearGradient(px,py+ph-2,px+pw,py+ph-2);
+    bg2.addColorStop(0,'transparent'); bg2.addColorStop(0.5,'#0055aa'); bg2.addColorStop(1,'transparent');
+    CTX.fillStyle=bg2; CTX.fillRect(px,py+ph-2,pw,2);
+
+    // Panel border
+    CTX.shadowColor='#0066cc'; CTX.shadowBlur=22;
+    CTX.strokeStyle='#0077cc'; CTX.lineWidth=2.5; CTX.strokeRect(px,py,pw,ph);
+    CTX.shadowBlur=0;
+
+    // Title
+    CTX.shadowColor='#0088ff'; CTX.shadowBlur=14;
+    CTX.fillStyle='#55ccff'; CTX.font='bold 13px "Press Start 2P"';
+    CTX.textAlign='center'; CTX.fillText('HOW TO PLAY', px+pw/2, py+32);
+    CTX.shadowBlur=0;
+
+    // Divider
+    CTX.strokeStyle='rgba(0,100,200,0.25)'; CTX.lineWidth=1;
+    CTX.beginPath(); CTX.moveTo(px+20,py+44); CTX.lineTo(px+pw-20,py+44); CTX.stroke();
+
+    // Helper: draw a single key cap
+    function key(kx,ky,label,w=24) {
+        const h=22;
+        // Body
+        CTX.fillStyle='#0d1e38'; CTX.fillRect(kx,ky,w,h);
+        // Top highlight (3D cap)
+        CTX.fillStyle='rgba(0,160,255,0.14)'; CTX.fillRect(kx+1,ky+1,w-2,9);
+        // Bottom shadow
+        CTX.fillStyle='rgba(0,0,0,0.45)'; CTX.fillRect(kx+1,ky+h-5,w-2,4);
+        // Border
+        CTX.strokeStyle='#1a4488'; CTX.lineWidth=1.5; CTX.strokeRect(kx,ky,w,h);
+        // Label
+        CTX.fillStyle='#88ccee'; CTX.font='7px "Press Start 2P"';
+        CTX.textAlign='center'; CTX.fillText(label,kx+w/2,ky+15);
+    }
+
+    // ── MOVE row ──────────────────────────────────────────────────────
+    CTX.fillStyle='#3a6688'; CTX.font='7px "Press Start 2P"'; CTX.textAlign='left';
+    CTX.fillText('MOVE', px+22, py+64);
+
+    // WASD cluster
+    const wx=px+88, wy=py+50;
+    key(wx+26,wy,   'W');
+    key(wx,   wy+24,'A'); key(wx+26,wy+24,'S'); key(wx+52,wy+24,'D');
+
+    // OR divider
+    CTX.fillStyle='#1e3a50'; CTX.font='7px "Press Start 2P"'; CTX.textAlign='center';
+    CTX.fillText('/', wx+106,wy+35);
+
+    // Arrow cluster
+    const ax=wx+118, ay=wy;
+    key(ax+26,ay,   '↑');
+    key(ax,   ay+24,'←'); key(ax+26,ay+24,'↓'); key(ax+52,ay+24,'→');
+
+    // ── INTERACT row ──────────────────────────────────────────────────
+    const iy=py+130;
+    CTX.strokeStyle='rgba(0,80,160,0.2)'; CTX.lineWidth=1;
+    CTX.beginPath(); CTX.moveTo(px+20,iy-10); CTX.lineTo(px+pw-20,iy-10); CTX.stroke();
+
+    CTX.fillStyle='#3a6688'; CTX.font='7px "Press Start 2P"'; CTX.textAlign='left';
+    CTX.fillText('INTERACT', px+22, iy+6);
+    key(px+120, iy-6, 'E', 28);
+    CTX.fillStyle='#2a4a5a'; CTX.font='7px "Press Start 2P"'; CTX.textAlign='left';
+    CTX.fillText('near a terminal', px+158, iy+6);
+
+    // ── ASK KLAUDIA row ───────────────────────────────────────────────
+    const ky2=iy+44;
+    CTX.strokeStyle='rgba(0,80,160,0.2)'; CTX.lineWidth=1;
+    CTX.beginPath(); CTX.moveTo(px+20,ky2-10); CTX.lineTo(px+pw-20,ky2-10); CTX.stroke();
+
+    CTX.fillStyle='#3a6688'; CTX.font='7px "Press Start 2P"'; CTX.textAlign='left';
+    CTX.fillText('GET HINTS', px+22, ky2+6);
+    // Klaudia button mockup
+    CTX.fillStyle='#091528'; CTX.fillRect(px+120,ky2-8,100,22);
+    CTX.strokeStyle='#0055aa'; CTX.lineWidth=1.5; CTX.strokeRect(px+120,ky2-8,100,22);
+    CTX.fillStyle='rgba(0,150,255,0.1)'; CTX.fillRect(px+121,ky2-7,98,10);
+    CTX.fillStyle='#0099cc'; CTX.font='6px "Press Start 2P"'; CTX.textAlign='center';
+    CTX.fillText('ASK KLAUDIA', px+170, ky2+7);
+    CTX.fillStyle='#1a3a50'; CTX.font='6px "Press Start 2P"'; CTX.textAlign='left';
+    CTX.fillText('→ hints + highlights', px+228, ky2+6);
+
+    // ── OBJECTIVE section ─────────────────────────────────────────────
+    const oy=ky2+46;
+    CTX.strokeStyle='rgba(0,80,160,0.2)'; CTX.lineWidth=1;
+    CTX.beginPath(); CTX.moveTo(px+20,oy-8); CTX.lineTo(px+pw-20,oy-8); CTX.stroke();
+
+    CTX.shadowColor='#cc8800'; CTX.shadowBlur=8;
+    CTX.fillStyle='#ffcc44'; CTX.font='7px "Press Start 2P"'; CTX.textAlign='center';
+    CTX.fillText('MISSION OBJECTIVE', px+pw/2, oy+8);
+    CTX.shadowBlur=0;
+
+    const steps=[
+        { t:'01  IDENTIFY THE CRASHED POD',    c:'#556677' },
+        { t:'02  APPLY THE CORRECT FIX',        c:'#556677' },
+        { t:'03  RESTORE CLUSTER ONLINE',       c:'#556677' },
+        { t:'04  BALANCE POWER DISTRIBUTION',   c:'#886622' },
+    ];
+    steps.forEach((s,i)=>{
+        CTX.fillStyle=s.c; CTX.font='6px "Press Start 2P"'; CTX.textAlign='left';
+        CTX.fillText(s.t, px+28, oy+26+i*16);
+    });
+
+    // ── Blink prompt ──────────────────────────────────────────────────
+    if (Math.floor(tick/20)%2===0) {
+        CTX.shadowColor='#00ff88'; CTX.shadowBlur=12;
+        CTX.fillStyle='#00ff88'; CTX.font='8px "Press Start 2P"'; CTX.textAlign='center';
+        CTX.fillText('▸  PRESS WASD / ARROW KEYS TO BEGIN  ◂', px+pw/2, py+ph-14);
+        CTX.shadowBlur=0;
+    }
+}
+
+// ── Game loop ─────────────────────────────────────────────────────
+function checkCollision(nx, ny) {
+    const p = {x:nx,y:ny,w:player.size,h:player.size};
+    for (let w of WALLS) {
+        if (!(p.x+p.w<w.x||p.x>w.x+w.w||p.y+p.h<w.y||p.y>w.y+w.h)) return true;
+    }
+    return false;
+}
+
+function gameLoop() {
+    drawShip();
+
+    if (instructionsActive) {
+        drawInstructionOverlay();
+        requestAnimationFrame(gameLoop);
+        return;
+    }
+
+    let nx=player.x, ny=player.y;
+    const spd=7;
+    if (keys['w']||keys['arrowup'])    ny-=spd;
+    if (keys['s']||keys['arrowdown'])  ny+=spd;
+    if (keys['a']||keys['arrowleft'])  nx-=spd;
+    if (keys['d']||keys['arrowright']) nx+=spd;
+    if (!checkCollision(nx,player.y)) player.x=nx;
+    if (!checkCollision(player.x,ny)) player.y=ny;
+    player.x=Math.max(70,Math.min(1000,player.x));
+    player.y=Math.max(70,Math.min(580,player.y));
+
+    nearHotspot=null;
+    let _nearDist=Infinity;
+    for (let s of HOTSPOTS) {
+        if (s.decorative) continue;
+        const dx=player.x+16-(s.x+s.w/2), dy=player.y+16-(s.y+s.h/2);
+        const d=Math.hypot(dx,dy);
+        if (d<110 && d<_nearDist) { nearHotspot=s; _nearDist=d; }
+    }
+    if (!nearHotspot) {
+        for (let s of HOTSPOTS) {
+            if (!s.decorative) continue;
+            const dx=player.x+16-(s.x+s.w/2), dy=player.y+16-(s.y+s.h/2);
+            if (Math.hypot(dx,dy)<110) { nearHotspot=s; break; }
+        }
+    }
+
+    const elapsed=Math.floor((Date.now()-GAME_STATE.totalTimeStart)/1000);
+    document.getElementById('timer').textContent=
+        `TIME: ${Math.floor(elapsed/60).toString().padStart(2,'0')}:${(elapsed%60).toString().padStart(2,'0')}`;
+    requestAnimationFrame(gameLoop);
+}
+
+// ── Interaction ───────────────────────────────────────────────────
+function interact() {
+    if (!nearHotspot) return;
+    if (nearHotspot.id === 'elevator')      { showElevatorDialogue(); return; }
+    if (nearHotspot.id === 'sleeping-a')    { showSleepingADialogue(); return; }
+    if (nearHotspot.id === 'commodore-qtr') { showCommodoreQtrDialogue(); return; }
+
+    if (GAME_STATE.phase === 'rca') {
+        if (nearHotspot.id === 'main-computer') openKomodorLogModal();
+        else showAccessDenied();
+    } else if (GAME_STATE.phase === 'troubleshoot') {
+        handleTroubleshoot(nearHotspot);
+    } else if (GAME_STATE.phase === 'remedy') {
+        if (nearHotspot.id === 'main-computer') enterPowerPhase();
+        else if (nearHotspot.id === 'power-gen') {
+            document.getElementById('modal-title').textContent = 'POWER GENERATOR — STANDBY';
+            document.getElementById('modal-body').innerHTML =
+                '<p style="color:#886600;font-size:9px;text-align:center;line-height:2;">Systems still initializing.<br>Bring the cluster back online first.</p>';
+            document.getElementById('interaction-modal').style.display='flex';
+        } else showAccessDenied();
+    } else if (GAME_STATE.phase === 'power') {
+        if (nearHotspot.id === 'power-gen') showPowerGeneratorModal();
+        else {
+            document.getElementById('modal-title').textContent = 'SYSTEM NOMINAL';
+            document.getElementById('modal-body').innerHTML =
+                '<p style="color:#00ff88;font-size:9px;text-align:center;line-height:2;">Cluster restored.<br>Head to the POWER GENERATOR.</p>';
+            document.getElementById('interaction-modal').style.display='flex';
+        }
+    }
+}
+
+function showAccessDenied() {
+    document.getElementById('modal-title').textContent = '⚠ ACCESS DENIED';
+    document.getElementById('modal-body').innerHTML =
+        '<p style="color:#ff4444;font-size:10px;line-height:2;text-align:center;">PLEASE ACCESS CLUSTER<br>VIA MAIN COMPUTER</p>';
+    document.getElementById('interaction-modal').style.display = 'flex';
+}
+
+function showCommodoreQtrDialogue() {
+    document.getElementById('modal-title').textContent = "COMMODORE'S QUARTERS";
+    document.getElementById('modal-body').innerHTML =
+        '<div style="display:flex;align-items:flex-start;gap:12px;">' +
+        '<img src="https://i.imgur.com/lIYvKj1.png" style="width:64px;height:64px;object-fit:cover;object-position:center 20%;image-rendering:pixelated;border:2px solid #664400;flex-shrink:0;">' +
+        '<p style="color:#aaccee;font-size:9px;line-height:2;margin:0;">' +
+        '<span style="color:#ffcc44;">COMMODORE:</span><br>' +
+        "I must have been out for<br>a while... I really need to<br>make it to the Bridge." +
+        '</p></div>';
+    document.getElementById('interaction-modal').style.display = 'flex';
+}
+
+function showSleepingADialogue() {
+    document.getElementById('modal-title').textContent = 'SLEEPING QUARTERS A';
+    document.getElementById('modal-body').innerHTML =
+        '<div style="display:flex;align-items:flex-start;gap:12px;">' +
+        '<img src="https://i.imgur.com/lIYvKj1.png" style="width:64px;height:64px;object-fit:cover;object-position:center 20%;image-rendering:pixelated;border:2px solid #223344;flex-shrink:0;">' +
+        '<p style="color:#aaccee;font-size:9px;line-height:2;margin:0;">' +
+        '<span style="color:#ffcc44;">COMMODORE:</span><br>' +
+        "No one is in here...<br>least they could do is<br>make their beds." +
+        '</p></div>';
+    document.getElementById('interaction-modal').style.display = 'flex';
+}
+
+function showElevatorDialogue() {
+    document.getElementById('modal-title').textContent = 'ELEVATOR — OFFLINE';
+    document.getElementById('modal-body').innerHTML =
+        '<div style="display:flex;align-items:flex-start;gap:12px;">' +
+        '<img src="https://i.imgur.com/lIYvKj1.png" style="width:64px;height:64px;object-fit:cover;object-position:center 20%;image-rendering:pixelated;border:2px solid #445566;flex-shrink:0;">' +
+        '<p style="color:#aaccee;font-size:9px;line-height:2;margin:0;">' +
+        '<span style="color:#ffcc44;">COMMODORE:</span><br>' +
+        "It's not working... Damn...<br>Hopefully when I get the ship<br>back up it will work again,<br>that's where the rest of the<br>crew should be." +
+        '</p></div>';
+    document.getElementById('interaction-modal').style.display = 'flex';
+}
+
+// ── Phase 4: Power Distribution ───────────────────────────────────
+function klaudiaApplyRemediation() {
+    document.getElementById('log-modal').style.display = 'none';
+    GAME_STATE.phase = 'power';
+    GAME_STATE.shuffledOptions = null;
+    _powerAttempts = 0;
+    const cpuOver = Math.random() < 0.5;
+    GAME_STATE.powerAlloc = POWER_TARGETS.map(t => ({
+        cpu: cpuOver
+            ? Math.min(95, t.cpu + 5 + Math.floor(Math.random() * 2) * 5)
+            : Math.max(5,  t.cpu - 5 - Math.floor(Math.random() * 2) * 5),
+        mem: cpuOver
+            ? Math.max(5,  t.mem - 5 - Math.floor(Math.random() * 2) * 5)
+            : Math.min(95, t.mem + 5 + Math.floor(Math.random() * 2) * 5)
+    }));
+    const pl = document.getElementById('phase-label');
+    if (pl) { pl.textContent = 'PHASE: POWER'; pl.style.color = '#ff9900'; }
+    document.getElementById('klaudia-speech').textContent =
+        "Remediation applied. A power surge hit during the fix — head to the POWER GENERATOR and optimize CPU and Memory distribution.";
+    saveGameState();
+}
+
+function enterPowerPhase() {
+    closeModal();
+    GAME_STATE.phase = 'power';
+    _powerAttempts = 0;
+    const cpuOver = Math.random() < 0.5;
+    GAME_STATE.powerAlloc = POWER_TARGETS.map(t => ({
+        cpu: cpuOver
+            ? Math.min(95, t.cpu + 5 + Math.floor(Math.random() * 2) * 5)
+            : Math.max(5,  t.cpu - 5 - Math.floor(Math.random() * 2) * 5),
+        mem: cpuOver
+            ? Math.max(5,  t.mem - 5 - Math.floor(Math.random() * 2) * 5)
+            : Math.min(95, t.mem + 5 + Math.floor(Math.random() * 2) * 5)
+    }));
+    document.getElementById('klaudia-speech').textContent =
+        "There was a power surge, you need to go to the power generator and make sure we have an efficient distribution of CPU and Memory.";
+}
+
+function showPowerGeneratorModal() {
+    document.getElementById('modal-title').innerHTML = '&#9889; POWER DISTRIBUTION CONTROL';
+
+    let html = `
+        <p style="color:#ff9900;font-size:9px;line-height:1.8;margin-bottom:14px;text-align:center;">
+            POWER SURGE DETECTED — Redistribute CPU &amp; Memory to restore optimal levels.
+        </p>
+        <div style="border:1px solid #331100;padding:10px 12px;background:#090600;margin-bottom:12px;">
+
+        <div style="display:flex;justify-content:flex-end;align-items:flex-start;gap:8px;margin-bottom:10px;">
+            ${GAME_STATE.klaudiaActive ? `<button id="klaudia-do-it-btn" onclick="klaudiaAutoOptimize()" style="padding:8px 12px;align-self:center;
+                background:linear-gradient(180deg,#1a0a33 0%,#0a0018 100%);
+                color:#cc88ff;border-color:#7700cc;font-size:7px;">
+                HAVE KLAUDIA DO IT
+            </button>` : ''}
+            <div id="pwr-budget-box" style="
+                background:#0a0600;border:2px solid #331800;padding:8px 12px;
+                font-family:'Press Start 2P',system-ui;min-width:138px;
+            ">
+                <div style="color:#553322;font-size:5px;text-align:center;letter-spacing:2px;margin-bottom:7px;">BUDGET STATUS</div>
+                <div style="margin-bottom:7px;">
+                    <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                        <span style="color:#336688;font-size:6px;">CPU</span>
+                        <span id="pwr-budget-cpu-val" style="font-size:6px;color:#556677;">&#8212;/200</span>
+                    </div>
+                    <div style="width:100%;height:8px;background:#0a0c14;border:1px solid #1a2030;margin:3px 0 2px;overflow:hidden;">
+                        <div id="pwr-budget-cpu-bar" style="height:100%;width:0%;background:#22cc66;transition:width 0.15s;"></div>
+                    </div>
+                    <div id="pwr-budget-cpu-status" style="font-size:5px;text-align:right;color:#22cc66;">&#8212;</div>
+                </div>
+                <div>
+                    <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                        <span style="color:#336688;font-size:6px;">MEM</span>
+                        <span id="pwr-budget-mem-val" style="font-size:6px;color:#556677;">&#8212;/225</span>
+                    </div>
+                    <div style="width:100%;height:8px;background:#0a0c14;border:1px solid #1a2030;margin:3px 0 2px;overflow:hidden;">
+                        <div id="pwr-budget-mem-bar" style="height:100%;width:0%;background:#22cc66;transition:width 0.15s;"></div>
+                    </div>
+                    <div id="pwr-budget-mem-status" style="font-size:5px;text-align:right;color:#22cc66;">&#8212;</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:100px 1fr 36px 52px;gap:4px;
+            color:#2a2010;font-size:7px;padding:0 0 6px 0;border-bottom:1px solid #1a1000;margin-bottom:8px;">
+            <span>SYSTEM</span><span>ALLOCATION</span><span style="text-align:right;">%</span><span style="text-align:center;">ADJUST</span>
+        </div>`;
+
+    POWER_TARGETS.forEach((sys, i) => {
+        const alloc = GAME_STATE.powerAlloc[i];
+        html += `
+        <div id="pwr-row-${i}" style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #120e00;border-left:3px solid transparent;padding-left:6px;transition:border-color 0.2s;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">
+                <span style="color:#ffaa44;font-size:8px;">${sys.name}</span>
+                <span id="pwr-row-status-${i}" style="font-size:7px;"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                <span style="color:#5588aa;font-size:7px;width:26px;flex-shrink:0;">CPU</span>
+                <div style="flex:1;height:13px;background:#0a0c14;border:1px solid #1a2030;min-width:0;">
+                    <div id="pwr-cpu-bar-${i}" style="height:100%;background:linear-gradient(90deg,#003a88,#0077ff);width:${alloc.cpu}%;transition:width 0.12s;"></div>
+                </div>
+                <span id="pwr-cpu-val-${i}" style="color:#4499ff;font-size:7px;width:28px;text-align:right;flex-shrink:0;">${alloc.cpu}%</span>
+                <div style="display:flex;gap:2px;flex-shrink:0;">
+                    <button onclick="adjustPower(${i},'cpu',-5)" style="padding:1px 5px;font-size:9px;margin:0;min-width:20px;">&#8722;</button>
+                    <button onclick="adjustPower(${i},'cpu',5)" style="padding:1px 5px;font-size:9px;margin:0;min-width:20px;">+</button>
+                </div>
+            </div>
+            <div id="pwr-cpu-opt-${i}" style="display:none;align-items:center;gap:6px;margin-bottom:7px;">
+                <span style="color:#224433;font-size:7px;width:26px;flex-shrink:0;">OPT</span>
+                <div style="flex:1;height:7px;background:#030a06;border:1px solid #0a1a0e;min-width:0;">
+                    <div style="height:100%;background:#00ee66;width:${sys.cpu}%;"></div>
+                </div>
+                <span style="color:#00ee66;font-size:7px;width:28px;text-align:right;flex-shrink:0;">${sys.cpu}%</span>
+                <div style="width:42px;flex-shrink:0;"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                <span style="color:#5588aa;font-size:7px;width:26px;flex-shrink:0;">MEM</span>
+                <div style="flex:1;height:13px;background:#0a0c14;border:1px solid #1a2030;min-width:0;">
+                    <div id="pwr-mem-bar-${i}" style="height:100%;background:linear-gradient(90deg,#330066,#8800ee);width:${alloc.mem}%;transition:width 0.12s;"></div>
+                </div>
+                <span id="pwr-mem-val-${i}" style="color:#bb44ff;font-size:7px;width:28px;text-align:right;flex-shrink:0;">${alloc.mem}%</span>
+                <div style="display:flex;gap:2px;flex-shrink:0;">
+                    <button onclick="adjustPower(${i},'mem',-5)" style="padding:1px 5px;font-size:9px;margin:0;min-width:20px;">&#8722;</button>
+                    <button onclick="adjustPower(${i},'mem',5)" style="padding:1px 5px;font-size:9px;margin:0;min-width:20px;">+</button>
+                </div>
+            </div>
+            <div id="pwr-mem-opt-${i}" style="display:none;align-items:center;gap:6px;">
+                <span style="color:#1a1033;font-size:7px;width:26px;flex-shrink:0;">OPT</span>
+                <div style="flex:1;height:7px;background:#060310;border:1px solid #100820;min-width:0;">
+                    <div style="height:100%;background:#9900ff;width:${sys.mem}%;"></div>
+                </div>
+                <span style="color:#9900ff;font-size:7px;width:28px;text-align:right;flex-shrink:0;">${sys.mem}%</span>
+                <div style="width:42px;flex-shrink:0;"></div>
+            </div>
+            <div id="pwr-hint-${i}" style="display:none;margin-top:5px;padding:4px 8px;
+                background:#0a0800;border:1px solid #443300;border-left:3px solid #ffaa00;
+                font-size:6px;color:#ffcc44;letter-spacing:1px;line-height:1.8;"></div>
+        </div>`;
+    });
+
+    html += `</div>
+        <div id="power-feedback" style="margin-bottom:10px;min-height:20px;"></div>
+        <div id="power-action-btns" style="text-align:center;">
+            <button onclick="submitPowerAllocation()" style="padding:11px 28px;
+                background:linear-gradient(180deg,#1a3300 0%,#0a1800 100%);
+                color:#66ff44;border-color:#339900;font-size:9px;">
+                &#9889; CONFIRM ALLOCATION
+            </button>
+        </div>`;
+
+    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('interaction-modal').style.display = 'flex';
+    updateBudgetIndicator();
+    if (GAME_STATE.klaudiaActive) showPowerOptimalBars();
+    if (GAME_STATE.klaudiaActive) updateKlaudiaContext();
+    if (_powerAttempts >= 15) showPowerHints();
+}
+
+function updateBudgetIndicator() {
+    if (!GAME_STATE.powerAlloc) return;
+    const cpuOpt = POWER_TARGETS.reduce((s,t)=>s+t.cpu, 0);  // 200
+    const memOpt = POWER_TARGETS.reduce((s,t)=>s+t.mem, 0);  // 225
+    const cpuCur = GAME_STATE.powerAlloc.reduce((s,a)=>s+a.cpu, 0);
+    const memCur = GAME_STATE.powerAlloc.reduce((s,a)=>s+a.mem, 0);
+
+    function applyBudget(res, cur, opt) {
+        const valEl = document.getElementById(`pwr-budget-${res}-val`);
+        const barEl = document.getElementById(`pwr-budget-${res}-bar`);
+        const stEl  = document.getElementById(`pwr-budget-${res}-status`);
+        if (!valEl) return;
+        const ratio = cur / opt;
+        const over  = ratio > 1.05;
+        const under = ratio < 0.95;
+        const color  = over ? '#ff4422' : under ? '#ffcc00' : '#22cc66';
+        const status = over ? '▲ OVER-RESOURCED' : under ? '▼ UNDER-RESOURCED' : '✓ OPTIMIZED';
+        valEl.textContent = `${cur}/${opt}`;
+        valEl.style.color = color;
+        barEl.style.width = Math.min(100, Math.round(ratio * 100)) + '%';
+        barEl.style.background = color;
+        stEl.textContent = status;
+        stEl.style.color = color;
+    }
+    applyBudget('cpu', cpuCur, cpuOpt);
+    applyBudget('mem', memCur, memOpt);
+
+    const box = document.getElementById('pwr-budget-box');
+    if (box) {
+        const cr = cpuCur/cpuOpt, mr = memCur/memOpt;
+        box.style.borderColor = (cr>1.05||mr>1.05) ? '#882200' : (cr<0.95||mr<0.95) ? '#886600' : '#225500';
+    }
+}
+
+function adjustPower(idx, resource, delta) {
+    if (!GAME_STATE.powerAlloc) return;
+    const alloc = GAME_STATE.powerAlloc[idx];
+    alloc[resource] = Math.max(5, Math.min(95, alloc[resource] + delta));
+    const bar = document.getElementById(`pwr-${resource}-bar-${idx}`);
+    const val = document.getElementById(`pwr-${resource}-val-${idx}`);
+    if (bar) bar.style.width = alloc[resource] + '%';
+    if (val) val.textContent = alloc[resource] + '%';
+}
+
+function klaudiaAutoOptimize() {
+    GAME_STATE.klaudiaUsed = true;
+    POWER_TARGETS.forEach((sys, i) => {
+        GAME_STATE.powerAlloc[i].cpu = sys.cpu;
+        GAME_STATE.powerAlloc[i].mem = sys.mem;
+        const cpuBar = document.getElementById(`pwr-cpu-bar-${i}`);
+        const cpuVal = document.getElementById(`pwr-cpu-val-${i}`);
+        const memBar = document.getElementById(`pwr-mem-bar-${i}`);
+        const memVal = document.getElementById(`pwr-mem-val-${i}`);
+        if (cpuBar) cpuBar.style.width = sys.cpu + '%';
+        if (cpuVal) cpuVal.textContent = sys.cpu + '%';
+        if (memBar) memBar.style.width = sys.mem + '%';
+        if (memVal) memVal.textContent = sys.mem + '%';
+    });
+    updateBudgetIndicator();
+    document.getElementById('klaudia-speech').textContent =
+        "I've set all systems to optimal levels. Hit CONFIRM ALLOCATION to apply.";
+}
+
+function submitPowerAllocation() {
+    updateBudgetIndicator();
+    const failedNames = [];
+    let allOk = true;
+
+    POWER_TARGETS.forEach((sys, i) => {
+        const alloc = GAME_STATE.powerAlloc[i];
+        const cpuOk = Math.abs(alloc.cpu - sys.cpu) <= 5;
+        const memOk = Math.abs(alloc.mem - sys.mem) <= 5;
+        const ok = cpuOk && memOk;
+        if (!ok) { allOk = false; failedNames.push(sys.name); }
+
+        const row = document.getElementById(`pwr-row-${i}`);
+        const st  = document.getElementById(`pwr-row-status-${i}`);
+        if (row) row.style.borderLeftColor = ok ? '#22cc66' : '#ff4422';
+        if (row && ok) { row.style.animation = 'none'; void row.offsetWidth; row.style.animation = 'greenFlash 1s ease-out forwards'; }
+        if (st)  { st.textContent = ok ? '✓ OPTIMIZED' : '✗ FAULT'; st.style.color = ok ? '#22cc66' : '#ff4422'; }
+    });
+
+    if (allOk) {
+        closeModal();
+        winGame();
+    } else {
+        _powerAttempts++;
+        flashErrorEffect();
+        const fb = document.getElementById('power-feedback');
+        const hintsUnlocked = _powerAttempts >= 15;
+        const attemptsLeft = Math.max(0, 15 - _powerAttempts);
+        if (fb) fb.innerHTML =
+            `<p style="color:#ff4422;font-size:8px;border:1px solid #882200;padding:7px;text-align:center;line-height:1.8;">POWER FAULT — ${failedNames.length} system${failedNames.length>1?'s':''} out of range:<br><span style="color:#ff8866;">${failedNames.join(', ')}</span><br>${hintsUnlocked ? '<span style="color:#ffcc44;font-size:7px;">⚡ Check the hints below each system.</span>' : `<span style="color:#556655;font-size:7px;">Hints unlock in ${attemptsLeft} attempt${attemptsLeft!==1?'s':''}.</span>`}</p>`;
+        if (hintsUnlocked) showPowerHints();
+    }
+}
+
+function showPowerHints() {
+    POWER_TARGETS.forEach((sys, i) => {
+        const alloc = GAME_STATE.powerAlloc[i];
+        const cpuOk = Math.abs(alloc.cpu - sys.cpu) <= 5;
+        const memOk = Math.abs(alloc.mem - sys.mem) <= 5;
+        const el = document.getElementById(`pwr-hint-${i}`);
+        if (!el) return;
+        if (cpuOk && memOk) { el.style.display='none'; return; }
+        const parts = [];
+        if (!cpuOk) parts.push(`CPU ${alloc.cpu > sys.cpu ? '▼ TOO HIGH' : '▲ TOO LOW'}`);
+        if (!memOk) parts.push(`MEM ${alloc.mem > sys.mem ? '▼ TOO HIGH' : '▲ TOO LOW'}`);
+        el.innerHTML = `⚡ HINT &nbsp;·&nbsp; ${parts.join(' &nbsp;|&nbsp; ')}`;
+        el.style.display = 'block';
+    });
+}
+
+function flashErrorEffect() {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(255,20,0,0.52);z-index:9999;pointer-events:none;';
+    document.body.appendChild(overlay);
+    setTimeout(() => { overlay.style.transition='opacity 0.55s'; overlay.style.opacity='0'; }, 90);
+    setTimeout(() => overlay.remove(), 660);
+
+    const pgX = arguments[0] !== undefined ? arguments[0] : 75;
+    const pgY = arguments[1] !== undefined ? arguments[1] : 350;
+    const pgW = arguments[2] !== undefined ? arguments[2] : 280;
+    const pgH = arguments[3] !== undefined ? arguments[3] : 235;
+    for (let i=0; i<36; i++) {
+        SPARKS.push({
+            x: pgX + Math.random()*pgW,
+            y: pgY + Math.random()*pgH,
+            vx: (Math.random()-0.5)*14,
+            vy: (Math.random()-0.5)*14 - 2,
+            life: 1.0,
+            decay: 0.035 + Math.random()*0.04,
+            color: Math.random()<0.6 ? '#ff6600' : '#ffcc00'
+        });
+    }
+}
+
+function showPowerOptimalBars() {
+    POWER_TARGETS.forEach((_, i) => {
+        const co = document.getElementById(`pwr-cpu-opt-${i}`);
+        const mo = document.getElementById(`pwr-mem-opt-${i}`);
+        if (co) co.style.display = 'flex';
+        if (mo) mo.style.display = 'flex';
+    });
+}
+
+// ── Cluster modal ─────────────────────────────────────────────────
+function openKomodorLogModal() {
+    showClusterOverview();
+    document.getElementById('log-modal').style.display='flex';
+}
+
+function showClusterOverview() {
+    GAME_STATE.currentLogSystem=null;
+    document.getElementById('rca-submit-btn').disabled=true;
+    const c=document.getElementById('log-container');
+    c.innerHTML=`
+        <div style="display:grid;grid-template-columns:1fr 100px 80px 90px;
+            color:#223a4a;font-size:9px;padding:5px 10px;border-bottom:1px solid #0a1e30;margin-bottom:3px;">
+            <span>SYSTEM / POD</span><span>STATUS</span><span>RESTARTS</span><span>LOGS</span>
+        </div>
+        <div id="cluster-rows"></div>`;
+    const tbody=document.getElementById('cluster-rows');
+    ALL_INCIDENT_TYPES.forEach(sys => {
+        const isIncident=(sys===GAME_STATE.incidentType);
+        const restarts=isIncident?(Math.floor(Math.random()*3)+5):0;
+        const row=document.createElement('div');
+        row.className='cluster-row';
+        row.innerHTML=`
+            <div>
+                <div style="color:#99bbcc;">${SYSTEM_NAMES[sys]}</div>
+                <div style="color:#1e3344;font-size:8px;margin-top:2px;">${SYSTEM_LOGS[sys].pod}</div>
+            </div>
+            <div><span style="color:${isIncident?'#cc8800':'#227744'};">● ${isIncident?'WARNING':'RUNNING'}</span></div>
+            <div style="color:${isIncident?'#bb6600':'#1e4433'};">${restarts}</div>
+            <div><button onclick="showSystemLogs('${sys}')" style="padding:3px 7px;font-size:8px;margin:0;">VIEW</button></div>`;
+        tbody.appendChild(row);
+    });
+}
+
+function showSystemLogs(sysId) {
+    GAME_STATE.currentLogSystem=sysId;
+    _klaudiaReadingKey=null;
+    const isIncident=(sysId===GAME_STATE.incidentType);
+    const logs=isIncident?getIncidentLogs(sysId):SYSTEM_LOGS[sysId].normal;
+    const c=document.getElementById('log-container');
+    const logsHidden = GAME_STATE.klaudiaActive;
+    c.innerHTML=`
+        <div style="display:flex;justify-content:space-between;align-items:center;
+            margin-bottom:10px;border-bottom:1px solid #0a1e30;padding-bottom:8px;">
+            <span style="color:#0099cc;font-size:11px;">LOGS: ${SYSTEM_NAMES[sysId]}</span>
+            <button onclick="showClusterOverview()" style="padding:3px 9px;font-size:8px;margin:0;">← BACK</button>
+        </div>
+        <div id="klaudia-log-readout" style="display:none;padding:14px 16px;
+            background:#060400;border:1px solid #554400;border-left:4px solid #ffaa00;
+            font-size:8px;color:#ccaa55;line-height:2;max-height:360px;overflow-y:auto;
+            margin-bottom:8px;"></div>
+        <div style="margin-bottom:4px;">
+            <button id="log-toggle-btn" onclick="toggleLogLines()"
+                style="width:100%;padding:5px 10px;font-size:7px;text-align:left;
+                    background:#050c18;border-color:#1a3044;color:#336688;letter-spacing:1px;">
+                ${logsHidden ? '▶ VIEW RAW LOGS' : '▼ HIDE LOGS'}
+            </button>
+        </div>
+        <div id="log-lines" style="max-height:200px;overflow-y:auto;display:${logsHidden?'none':'block'};"></div>`;
+    const ll=document.getElementById('log-lines');
+    logs.forEach(line => {
+        const d=document.createElement('div');
+        d.className='log-line';
+        const isSusp=getCurrentScenario().suspiciousTest(line);
+        if (isSusp) d.dataset.suspicious='true';
+        // suspicious class NOT added — player must find it; Klaudia reveals on request
+        d.textContent=line;
+        d.onclick=()=>{
+            if (d.dataset.suspicious==='true') {
+                d.style.background='#140e00';
+                d.style.borderLeftColor='#aaff00';
+                d.style.color='#bbff33';
+                document.getElementById('rca-submit-btn').disabled=false;
+            }
+        };
+        ll.appendChild(d);
+    });
+    if (GAME_STATE.klaudiaActive) setTimeout(updateKlaudiaContext, 0);
+}
+
+function toggleLogLines() {
+    const ll  = document.getElementById('log-lines');
+    const btn = document.getElementById('log-toggle-btn');
+    if (!ll || !btn) return;
+    const open = ll.style.display !== 'none';
+    ll.style.display  = open ? 'none' : 'block';
+    btn.textContent   = open ? '▶ VIEW RAW LOGS' : '▼ HIDE LOGS';
+}
+
+function submitRCA() {
+    closeModal();
+    GAME_STATE.phase='troubleshoot';
+    document.getElementById('phase-label').textContent='PHASE: TROUBLESHOOT';
+    document.getElementById('phase-label').style.color='#ff7733';
+    saveGameState();
+    if (GAME_STATE.klaudiaActive) updateKlaudiaContext();
+}
+
+// ── Troubleshoot: 4 options ───────────────────────────────────────
+function handleTroubleshoot(spot) {
+    document.getElementById('modal-title').innerHTML=`> ${spot.name}`;
+    let html='';
+    if (spot.id===GAME_STATE.incidentType) {
+        if (!GAME_STATE.shuffledOptions) {
+            const opts=getFIXOptions(spot.id);
+            for (let i=opts.length-1;i>0;i--) {
+                const j=Math.floor(Math.random()*(i+1));
+                [opts[i],opts[j]]=[opts[j],opts[i]];
+            }
+            GAME_STATE.shuffledOptions=opts;
+        }
+        html=`<p style="color:#aa5522;font-size:9px;margin-bottom:14px;">Terminal: ${SYSTEM_LOGS[spot.id].pod}<br>Select the correct remediation command:</p>`;
+        html+=`<div style="display:flex;align-items:stretch;gap:0;">`;
+        html+=`<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;">`;
+        GAME_STATE.shuffledOptions.forEach((opt,i) => {
+            html+=`<div style="display:flex;align-items:center;">
+                <button class="fix-btn" id="fix-btn-${i}" onclick="attemptFix(${i})" style="flex:1;width:auto;margin:0;">${opt.label}\n${opt.sub}</button>
+                <div style="display:flex;align-items:center;flex-shrink:0;">
+                    <div style="width:24px;height:3px;
+                        background:repeating-linear-gradient(90deg,#772200 0,#cc5500 5px,#1a0500 5px,#1a0500 9px);
+                        box-shadow:0 0 4px rgba(200,80,0,0.35);"></div>
+                    <div style="width:7px;height:7px;border-radius:50%;flex-shrink:0;
+                        background:#ff6600;border:1px solid #ffaa44;
+                        box-shadow:0 0 5px #ff6600,0 0 10px rgba(255,100,0,0.3);"></div>
+                </div>
+            </div>`;
+        });
+        html+=`</div>`;
+        html+=`<div style="width:22px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:4px 0;">
+            <div style="width:3px;flex:1;background:linear-gradient(180deg,#110400,#552200,#ff6600);border-radius:2px;"></div>
+            <div style="width:20px;height:20px;border-radius:50%;flex-shrink:0;
+                border:2px solid #ff8800;
+                background:radial-gradient(circle,#3a1200 0%,#0a0200 100%);
+                box-shadow:0 0 10px #ff6600,0 0 22px rgba(255,100,0,0.35),inset 0 0 6px rgba(255,150,0,0.2);">
+            </div>
+            <div style="width:3px;flex:1;background:linear-gradient(180deg,#ff6600,#552200,#110400);border-radius:2px;"></div>
+        </div></div>`;
+        html+=`<div id="fix-feedback" style="margin-top:8px;"></div>`;
+    } else if (EASTER_EGGS[spot.id]) {
+        GAME_STATE.easterEggsFound++;
+        html=`<p style="color:#ffcc00">${EASTER_EGGS[spot.id]}</p>`;
+    } else {
+        html=`<p style="color:#2a4455;font-size:9px;">All readings nominal here.</p>`;
+    }
+    document.getElementById('modal-body').innerHTML=html;
+    document.getElementById('interaction-modal').style.display='flex';
+    if (GAME_STATE.klaudiaActive) setTimeout(updateKlaudiaContext, 0);
+}
+
+function attemptFix(index) {
+    const opt=GAME_STATE.shuffledOptions[index];
+    const fb=document.getElementById('fix-feedback');
+    if (opt.correct) {
+        completeTroubleshoot();
+    } else {
+        const hs = nearHotspot;
+        if (hs) flashErrorEffect(hs.x, hs.y, hs.w, hs.h);
+        else    flashErrorEffect();
+        if (fb) {
+            fb.innerHTML=`<p style="color:#ff4422;font-size:9px;border:1px solid #882200;padding:8px;">
+                COMMAND FAILED — pod still crashing. Review the command carefully.</p>`;
+        }
+    }
+}
+
+function completeTroubleshoot() {
+    closeModal();
+    GAME_STATE.phase='remedy';
+    document.getElementById('phase-label').textContent='PHASE: REMEDY';
+    document.getElementById('phase-label').style.color='#00ffcc';
+    saveGameState();
+    if (GAME_STATE.klaudiaActive) updateKlaudiaContext();
+}
+
+// ── Win ───────────────────────────────────────────────────────────
+function winGame() {
+    localStorage.removeItem('kubestanut-save');
+    const time=Math.floor((Date.now()-GAME_STATE.totalTimeStart)/1000);
+    GAME_STATE.finishTime=time;
+    const fmt=s=>`${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+    if (!GAME_STATE.klaudiaUsed) {
+        localStorage.setItem('kubestanut-no-klaudia-time', time);
+        showNoKlaudiaTaunt();
+        return;
+    }
+    document.getElementById('win-time').innerHTML=`YOUR TIME: ${fmt(time)}`;
+    document.getElementById('win-comparison').innerHTML='';
+    const prevTime=parseInt(localStorage.getItem('kubestanut-no-klaudia-time')||'0');
+    if (prevTime>0) {
+        const saved=prevTime-time;
+        const pct=Math.round(Math.abs(saved)/prevTime*100);
+        const faster=saved>0;
+        const realMTTR = 45;
+        const klaudiaMTTR = Math.round(realMTTR * (1 - pct / 100));
+        document.getElementById('comparison-content').innerHTML=`
+            <div style="font-size:9px;color:#667766;line-height:2.2;margin-bottom:12px;">
+                How did Klaudia impact your MTTR and optimization time?
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;
+                    background:#0a0400;border:1px solid #332200;padding:10px 16px;">
+                    <span style="font-size:9px;color:#886644;">WITHOUT KLAUDIA</span>
+                    <span style="font-size:14px;color:#ff7744;">${fmt(prevTime)}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;
+                    background:#020a04;border:1px solid #224422;padding:10px 16px;">
+                    <span style="font-size:9px;color:#448866;">WITH KLAUDIA</span>
+                    <span style="font-size:14px;color:#44ff88;">${fmt(time)}</span>
+                </div>
+            </div>
+            <div style="font-size:12px;font-weight:bold;color:${faster?'#44ff88':'#ff6644'};
+                border-top:1px solid #223322;padding-top:12px;">
+                ${faster
+                    ? `YOU WERE ${pct}% FASTER WITH KLAUDIA<br>
+                       <span style='font-size:9px;color:#336633;'>Saved ${fmt(saved)} off your run</span><br><br>
+                       <span style='font-size:11px;font-weight:bold;color:#88bb88;line-height:2.2;'>
+                           Imagine this in a real Kubernetes estate —<br>
+                           a 45 min MTTR becomes just <span style='color:#44ff88;font-size:15px;font-weight:bold;'>${klaudiaMTTR} min</span> with Klaudia.
+                       </span>`
+                    : `YOU WERE ${pct}% SLOWER WITH KLAUDIA<br><span style='font-size:9px;color:#663333;'>Took ${fmt(-saved)} longer</span>`}
+            </div>`;
+        document.getElementById('comparison-modal').style.display='flex';
+    } else {
+        showWinModal();
+    }
+}
+
+function showWinModal() {
+    document.getElementById('comparison-modal').style.display='none';
+    document.getElementById('win-modal').style.display='flex';
+}
+
+let _nkTimer=null;
+let _klaudiaReadTimer=null;
+let _klaudiaReadingKey=null;
+let _powerAttempts=0;
+function showNoKlaudiaTaunt() {
+    restartGame(); // reset state immediately so a new run begins under the overlay
+    const overlay=document.getElementById('no-klaudia-overlay');
+    overlay.style.display='flex';
+    let secs=8;
+    document.getElementById('nk-secs').textContent=secs;
+    _nkTimer=setInterval(()=>{
+        secs--;
+        document.getElementById('nk-secs').textContent=secs;
+        if(secs<=0){ clearInterval(_nkTimer); _nkTimer=null; dismissNoKlaudia(); }
+    },1000);
+}
+function dismissNoKlaudia() {
+    if(_nkTimer){ clearInterval(_nkTimer); _nkTimer=null; }
+    document.getElementById('no-klaudia-overlay').style.display='none';
+    const prevTime = parseInt(localStorage.getItem('kubestanut-no-klaudia-time')||'0');
+    if (prevTime > 0) {
+        const fmt = s => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+        document.getElementById('second-run-prev-time').textContent = fmt(prevTime);
+        document.getElementById('klaudia-second-run-modal').style.display = 'flex';
+    } else {
+        document.getElementById('klaudia-hint-arrow').style.display='block';
+    }
+}
+
+function dismissSecondRunPopup() {
+    document.getElementById('klaudia-second-run-modal').style.display='none';
+    updateKlaudiaContext();
+}
+
+function saveScoreAndShowLeaderboard() {
+    const fullName = document.getElementById('pii-fullname').value.trim();
+    const email    = document.getElementById('pii-email').value.trim();
+    const phone    = document.getElementById('pii-phone').value.trim();
+    const raw      = document.getElementById('player-name-input').value.trim();
+    const errEl    = document.getElementById('save-error');
+
+    if (!fullName || !email || !raw) {
+        errEl.textContent = '⚠ FULL NAME, EMAIL, AND CALLSIGN ARE REQUIRED';
+        errEl.style.display = 'block';
+        return;
+    }
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailOk) {
+        errEl.textContent = '⚠ PLEASE ENTER A VALID EMAIL ADDRESS';
+        errEl.style.display = 'block';
+        return;
+    }
+    errEl.style.display = 'none';
+
+    const name = raw.toUpperCase().slice(0, 12);
+    const time = GAME_STATE.finishTime || Math.floor((Date.now() - GAME_STATE.totalTimeStart) / 1000);
+    const klaudiaRun = GAME_STATE.klaudiaUsed;
+
+    // Store PII lead separately
+    const leads = JSON.parse(localStorage.getItem('kubestanut-leads') || '[]');
+    leads.push({
+        fullName, email, phone: phone || null,
+        callsign: name, time, klaudiaRun,
+        timestamp: new Date().toISOString()
+    });
+    localStorage.setItem('kubestanut-leads', JSON.stringify(leads));
+
+    // Save Klaudia run score
+    const klaudiaScores = JSON.parse(localStorage.getItem('kubestanut-lb-klaudia') || '[]');
+    klaudiaScores.push({name, time});
+    klaudiaScores.sort((a,b) => a.time - b.time);
+    localStorage.setItem('kubestanut-lb-klaudia', JSON.stringify(klaudiaScores.slice(0, 10)));
+
+    // Auto-save playthrough 1 (no-Klaudia) time to the solo column using the same callsign
+    const p1Time = parseInt(localStorage.getItem('kubestanut-no-klaudia-time') || '0');
+    if (p1Time > 0) {
+        const soloScores = JSON.parse(localStorage.getItem('kubestanut-lb-solo') || '[]');
+        soloScores.push({name, time: p1Time});
+        soloScores.sort((a,b) => a.time - b.time);
+        localStorage.setItem('kubestanut-lb-solo', JSON.stringify(soloScores.slice(0, 10)));
+    }
+
+    document.getElementById('save-section').style.display='none';
+    const lb = document.getElementById('leaderboard');
+    lb.style.display = 'block';
+    lb.innerHTML = buildLeaderboardHTML(name, time, p1Time);
+}
+
+function buildLeaderboardHTML(highlightName, highlightKlaudiaTime, highlightSoloTime) {
+    const fmt = s => `${Math.floor(s.time/60).toString().padStart(2,'0')}:${(s.time%60).toString().padStart(2,'0')}`;
+    const medals = ['🥇','🥈','🥉'];
+
+    const soloScores    = JSON.parse(localStorage.getItem('kubestanut-lb-solo')    || '[]');
+    const klaudiaScores = JSON.parse(localStorage.getItem('kubestanut-lb-klaudia') || '[]');
+
+    // Klaudia always appears in the Klaudia column — players can beat her
+    const klaudiaBot  = {name:'KLAUDIA', time:10, bot:true};
+    const klaudiaList = [...klaudiaScores, klaudiaBot].sort((a,b)=>a.time-b.time).slice(0,10);
+
+    function col(entries, title, highlightTime) {
+        let h = `<div style="flex:1;min-width:0;">`;
+        h += `<div style="font-size:6px;letter-spacing:2px;text-align:center;padding:6px 0 8px;
+            border-bottom:1px solid #112233;margin-bottom:6px;color:#00ccff;">${title}</div>`;
+        if (!entries.length) {
+            h += `<div style="text-align:center;color:#223344;font-size:6px;padding:12px 0;">NO SCORES YET</div>`;
+        } else {
+            entries.forEach((s, i) => {
+                const isMe  = !s.bot && !!highlightTime && s.name===highlightName && s.time===highlightTime;
+                const isBot = s.bot===true;
+                h += `<div style="display:flex;justify-content:space-between;align-items:center;
+                    padding:4px 7px;margin:2px 0;font-size:7px;
+                    background:${isBot?'#1a1400':isMe?'#0a1e0a':'#030a18'};
+                    border-left:3px solid ${isBot?'#ffcc00':isMe?'#00ff88':'#0a1830'};
+                    color:${isBot?'#ffee88':isMe?'#00ff88':'#88aacc'};">
+                    <span style="font-family:monospace;">${medals[i]||`${i+1}.`} ${s.name}${isBot?' ★':''}</span>
+                    <span style="font-family:monospace;color:${isBot?'#ffcc00':isMe?'#ffcc00':'#2a5566'};">${fmt(s)}</span>
+                </div>`;
+            });
+        }
+        h += `</div>`;
+        return h;
+    }
+
+    let html = `<div style="color:#00ccff;font-size:8px;text-align:center;
+        border-top:2px solid #003366;padding:10px 0 10px;letter-spacing:2px;margin-bottom:8px;">
+        LEADERBOARD</div>`;
+    html += `<div style="display:flex;gap:10px;align-items:flex-start;">`;
+    html += col(soloScores,  '— WITHOUT KLAUDIA —', highlightSoloTime);
+    html += `<div style="width:1px;background:#112233;align-self:stretch;flex-shrink:0;"></div>`;
+    html += col(klaudiaList, '— WITH KLAUDIA —',    highlightKlaudiaTime);
+    html += `</div>`;
+    return html;
+}
+
+function playAgain() {
+    localStorage.removeItem('kubestanut-no-klaudia-time');
+    restartGame();
+}
+
+function restartGame() {
+    if (_klaudiaReadTimer) { clearInterval(_klaudiaReadTimer); _klaudiaReadTimer=null; }
+    _klaudiaReadingKey=null;
+    const isSecondRun = !!localStorage.getItem('kubestanut-no-klaudia-time');
+    GAME_STATE={
+        phase:'rca',
+        incidentType:ALL_INCIDENT_TYPES[Math.floor(Math.random()*ALL_INCIDENT_TYPES.length)],
+        scenarioId:SCENARIOS[Math.floor(Math.random()*SCENARIOS.length)].id,
+        totalTimeStart:Date.now(),
+        klaudiaEnabled:isSecondRun,
+        klaudiaUsed:isSecondRun,
+        klaudiaActive:isSecondRun,
+        shuffledOptions:null,
+        currentLogSystem:null,
+        easterEggsFound:0,
+        powerAlloc:null
+    };
+    applyScenarioUI();
+    localStorage.removeItem('kubestanut-save');
+    player={x:260,y:120,size:32};
+    document.getElementById('win-modal').style.display='none';
+    document.getElementById('leaderboard').style.display='none';
+    document.getElementById('save-section').style.display='block';
+    ['pii-fullname','pii-email','pii-phone','player-name-input'].forEach(id=>{
+        const el=document.getElementById(id); if(el) el.value='';
+    });
+    const se=document.getElementById('save-error'); if(se) se.style.display='none';
+    document.getElementById('phase-label').textContent='PHASE: RCA';
+    document.getElementById('phase-label').style.color='#00ddff';
+    const kb=document.getElementById('klaudia-ask-btn');
+    if(kb){
+        if(isSecondRun){
+            kb.textContent='KLAUDIA: ONLINE';kb.style.borderColor='#00ff88';kb.style.color='#00ff88';
+            kb.disabled=false;kb.style.opacity='';kb.style.cursor='';
+        } else {
+            kb.textContent='KLAUDIA: OFFLINE';kb.style.borderColor='#333355';kb.style.color='#334455';
+            kb.disabled=true;kb.style.opacity='0.3';kb.style.cursor='not-allowed';
+        }
+    }
+    document.getElementById('klaudia-speech').textContent='Something is wrong aboard the SS Komodor. Find it.';
+}
+
+// ── Klaudia ───────────────────────────────────────────────────────
+function toggleKlaudiaBox() {
+    const body=document.getElementById('klaudia-body');
+    const tog=document.getElementById('klaudia-toggle');
+    const collapsed=body.style.display==='none';
+    body.style.display=collapsed?'block':'none';
+    tog.textContent=collapsed?'−':'+';
+}
+
+function startKlaudiaReading(key, readoutHTML, duration) {
+    if (_klaudiaReadingKey === key) return;
+    _klaudiaReadingKey = key;
+    if (_klaudiaReadTimer) { clearInterval(_klaudiaReadTimer); _klaudiaReadTimer = null; }
+    const panel = document.getElementById('klaudia-log-readout');
+    if (!panel) return;
+    panel.style.display = 'block';
+    let dots = 1;
+    panel.innerHTML = '&#129302; ANALYZING LOGS.';
+    _klaudiaReadTimer = setInterval(() => {
+        dots = (dots % 3) + 1;
+        panel.innerHTML = '&#129302; ANALYZING LOGS' + '.'.repeat(dots);
+    }, 420);
+    setTimeout(() => {
+        if (_klaudiaReadTimer) { clearInterval(_klaudiaReadTimer); _klaudiaReadTimer = null; }
+        const p = document.getElementById('klaudia-log-readout');
+        if (p) p.innerHTML = readoutHTML;
+        if (GAME_STATE.currentLogSystem === GAME_STATE.incidentType) {
+            const btn = document.getElementById('rca-submit-btn');
+            if (btn) btn.disabled = false;
+        }
+    }, duration);
+}
+
+function askKlaudiaDirectly() {
+    if (!localStorage.getItem('kubestanut-no-klaudia-time')) return;
+    GAME_STATE.klaudiaUsed=true;
+    document.getElementById('klaudia-hint-arrow').style.display='none';
+    if (!GAME_STATE.klaudiaActive) {
+        GAME_STATE.klaudiaActive=true;
+        const btn=document.getElementById('klaudia-ask-btn');
+        if(btn){btn.textContent='KLAUDIA: ONLINE';btn.style.borderColor='#00ff88';btn.style.color='#00ff88';}
+    }
+    updateKlaudiaContext();
+}
+
+function updateKlaudiaContext() {
+    const phase=GAME_STATE.phase;
+    const logModalOpen=document.getElementById('log-modal').style.display==='flex';
+    const interactionOpen=document.getElementById('interaction-modal').style.display==='flex';
+    const curSys=GAME_STATE.currentLogSystem;
+    const active=GAME_STATE.klaudiaActive;
+    let msg='';
+
+    if (phase==='rca') {
+        if (logModalOpen && curSys) {
+            if (active) {
+                const isIncident = curSys===GAME_STATE.incidentType;
+                const readout = isIncident ? getCurrentScenario().klaudiaRCA : getCurrentScenario().klaudiaClean;
+                startKlaudiaReading(`rca-${curSys}`, readout, isIncident ? 1500 : 1500);
+                document.querySelectorAll('#log-lines .log-line').forEach(d=>{
+                    if (d.dataset.suspicious==='true') {
+                        d.classList.add('suspicious');
+                        d.style.outline='1px solid #aa6600';
+                    }
+                });
+                msg = isIncident ? "Scanning logs — analysis in progress..." : "Checking for anomalies...";
+            } else if (curSys===GAME_STATE.incidentType) {
+                document.querySelectorAll('#log-lines .log-line').forEach(d=>{
+                    if (d.dataset.suspicious==='true') {
+                        d.classList.add('suspicious');
+                        d.style.outline='1px solid #aa6600';
+                    }
+                });
+                msg="Something looks off in these logs. Study the error codes and events carefully.";
+            } else {
+                msg="Check every system. The culprit might not be obvious.";
+            }
+        } else if (nearHotspot && nearHotspot.id==='main-computer') {
+            msg="You're at the right terminal. Press E to open the Komodor cluster view — check each pod's logs for exit codes and memory spikes.";
+        } else {
+            msg=active
+                ? "I'm online. Head to the MAIN COMPUTER — the blue room at the top-center. Press E there to open the cluster dashboard and start reading logs."
+                : "Head to the MAIN COMPUTER at the top-center of the ship and press E.";
+        }
+    } else if (phase==='troubleshoot') {
+        if (interactionOpen && GAME_STATE.shuffledOptions) {
+            if (active) {
+                GAME_STATE.shuffledOptions.forEach((opt,i)=>{
+                    const btn=document.getElementById(`fix-btn-${i}`);
+                    if (!btn) return;
+                    if (opt.correct) btn.classList.add('klaudia-pick');
+                    else btn.classList.add('klaudia-dim');
+                });
+            }
+            msg=active
+                ? getCurrentScenario().klaudiaTroubleshoot
+                : "Pick your remediation command carefully. One wrong flag and the pod stays down.";
+        } else if (nearHotspot && nearHotspot.id===GAME_STATE.incidentType) {
+            msg="You're at the right terminal. Press E to open it and apply the fix.";
+        } else {
+            msg=active
+                ? `RCA confirmed. Walk to the ${SYSTEM_NAMES[GAME_STATE.incidentType]} room and press E to access the repair terminal.`
+                : "You know which system is down. Walk to that room and interact with the terminal.";
+        }
+    } else if (phase==='remedy') {
+        msg="Fix applied. Walk back to the MAIN COMPUTER — the blue room at the top-center — and press E to bring the ship back online.";
+    } else if (phase==='power') {
+        if (interactionOpen) {
+            if (active) {
+                showPowerOptimalBars();
+                if (!document.getElementById('klaudia-do-it-btn')) {
+                    const box = document.getElementById('pwr-budget-box');
+                    if (box && box.parentNode) {
+                        const b = document.createElement('button');
+                        b.id = 'klaudia-do-it-btn';
+                        b.setAttribute('onclick', 'klaudiaAutoOptimize()');
+                        b.style.cssText = 'padding:8px 12px;align-self:center;background:linear-gradient(180deg,#1a0a33 0%,#0a0018 100%);color:#cc88ff;border-color:#7700cc;font-size:7px;font-family:inherit;cursor:pointer;border:1px solid #7700cc;';
+                        b.innerHTML = 'HAVE KLAUDIA DO IT';
+                        box.parentNode.insertBefore(b, box);
+                    }
+                }
+                msg="I've revealed the optimal targets (green bars). Match your CPU and Memory to the green levels for every system, then confirm.";
+            } else {
+                msg="Adjust CPU and Memory for each system using the +/- buttons, then hit CONFIRM ALLOCATION.";
+            }
+        } else if (nearHotspot && nearHotspot.id==='power-gen') {
+            msg="Press E to open the power distribution panel.";
+        } else {
+            msg=active
+                ? "Head to the POWER GENERATOR — lower-left of the ship. Optimize CPU and Memory for all five systems."
+                : "Power surge detected! Go to the POWER GENERATOR on the lower-left and balance the distribution.";
+        }
+    }
+
+    document.getElementById('klaudia-speech').textContent=msg;
+}
+
+// ── Auto-save ─────────────────────────────────────────────────────
+function saveGameState() {
+    const s={
+        phase:GAME_STATE.phase,
+        incidentType:GAME_STATE.incidentType,
+        scenarioId:GAME_STATE.scenarioId,
+        totalTimeStart:GAME_STATE.totalTimeStart,
+        klaudiaUsed:GAME_STATE.klaudiaUsed,
+        klaudiaActive:GAME_STATE.klaudiaActive,
+        shuffledOptions:GAME_STATE.shuffledOptions,
+        px:player.x, py:player.y,
+        savedAt:Date.now()
+    };
+    localStorage.setItem('kubestanut-save',JSON.stringify(s));
+}
+
+function loadSavedGame() {
+    const raw=localStorage.getItem('kubestanut-save');
+    if(!raw) return false;
+    let s; try{s=JSON.parse(raw);}catch{return false;}
+    if(Date.now()-s.savedAt>7200000){localStorage.removeItem('kubestanut-save');return false;}
+    GAME_STATE.phase=s.phase||'rca';
+    GAME_STATE.incidentType=s.incidentType||GAME_STATE.incidentType;
+    GAME_STATE.scenarioId=s.scenarioId||GAME_STATE.scenarioId;
+    GAME_STATE.totalTimeStart=s.totalTimeStart||Date.now();
+    GAME_STATE.klaudiaUsed=s.klaudiaUsed||false;
+    GAME_STATE.klaudiaActive=s.klaudiaActive||false;
+    GAME_STATE.shuffledOptions=s.shuffledOptions||null;
+    player.x=s.px||180; player.y=s.py||120;
+    const labels={rca:'PHASE: RCA',troubleshoot:'PHASE: TROUBLESHOOT',remedy:'PHASE: REMEDY'};
+    const colors={rca:'#00ddff',troubleshoot:'#ff7733',remedy:'#00ffcc'};
+    const pl=document.getElementById('phase-label');
+    pl.textContent=labels[GAME_STATE.phase]||'PHASE: RCA';
+    pl.style.color=colors[GAME_STATE.phase]||'#00ddff';
+    if(GAME_STATE.klaudiaActive){
+        const btn=document.getElementById('klaudia-ask-btn');
+        if(btn){btn.textContent='KLAUDIA: ONLINE';btn.style.borderColor='#00ff88';btn.style.color='#00ff88';}
+    }
+    return true;
+}
+
+// ── Misc ──────────────────────────────────────────────────────────
+function bookDemo()   { window.open('https://komodor.com/contact-sales/','_blank'); }
+function closeModal() {
+    document.querySelectorAll('.modal').forEach(m=>m.style.display='none');
+    GAME_STATE.currentLogSystem=null;
+    if (GAME_STATE.klaudiaActive) updateKlaudiaContext();
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════
+// INTRO CUTSCENE — MGS / RPG dialogue style
+// ═══════════════════════════════════════════════════════════════════
+const DIALOGUE_SCRIPT = [
+    { speaker:'KLAUDIA',   side:'left',
+      text:"Commodore — the ship has been hit with something. We're experiencing an outage somewhere." },
+    { speaker:'COMMODORE', side:'right',
+      text:"What happened..." },
+    { speaker:'KLAUDIA',   side:'left',
+      text:"No time, sir. We need to get the ship back up and running fast!" },
+    { speaker:'COMMODORE', side:'right',
+      text:"Alright. Let's get to work." },
+];
+
+let CS = {
+    active:true, line:0, chars:0, timer:0, speed:2,
+    blink:0, klImg:null, cmImg:null,
+};
+
+function _csLoad() {
+    CS.klImg = new Image(); CS.klImg.crossOrigin='anonymous';
+    CS.klImg.src = 'https://i.imgur.com/bPGngvn.png';
+    CS.cmImg = new Image(); CS.cmImg.crossOrigin='anonymous';
+    CS.cmImg.src = 'https://i.imgur.com/lIYvKj1.png';
+}
+
+function _csAdvance() {
+    if (!CS.active) return;
+    const cur = DIALOGUE_SCRIPT[CS.line];
+    if (CS.chars < cur.text.length) {
+        CS.chars = cur.text.length;
+    } else {
+        CS.line++; CS.chars = 0; CS.timer = 0;
+        if (CS.line >= DIALOGUE_SCRIPT.length) {
+            CS.active = false;
+            document.getElementById('klaudia-box').style.visibility='visible';
+            instructionsActive = true;
+            requestAnimationFrame(gameLoop);
+        }
+    }
+}
+
+function _csDrawCommodore(px, py, pw, ph) {
+    const g=CTX.createLinearGradient(px,py,px+pw,py+ph);
+    g.addColorStop(0,'#0a0d18'); g.addColorStop(1,'#050810');
+    CTX.fillStyle=g; CTX.fillRect(px,py,pw,ph);
+    const cx=px+pw/2, s=pw/280;
+    // Uniform body
+    CTX.fillStyle='#0d1428';
+    CTX.beginPath();
+    CTX.moveTo(cx-90*s,py+ph); CTX.lineTo(cx-108*s,py+265*s);
+    CTX.lineTo(cx-55*s,py+232*s); CTX.lineTo(cx,py+222*s);
+    CTX.lineTo(cx+55*s,py+232*s); CTX.lineTo(cx+108*s,py+265*s);
+    CTX.lineTo(cx+90*s,py+ph); CTX.fill();
+    // Lapels
+    CTX.fillStyle='#080f1e';
+    CTX.beginPath(); CTX.moveTo(cx-18*s,py+222*s); CTX.lineTo(cx,py+275*s); CTX.lineTo(cx+18*s,py+222*s); CTX.fill();
+    // Gold epaulettes
+    CTX.fillStyle='#c8980a';
+    CTX.fillRect(cx-112*s,py+232*s,32*s,10*s); CTX.fillRect(cx+80*s,py+232*s,32*s,10*s);
+    CTX.fillStyle='#e4ba14';
+    for(let i=0;i<4;i++){
+        CTX.fillRect(cx-110*s+i*8*s,py+234*s,5*s,6*s);
+        CTX.fillRect(cx+82*s+i*8*s, py+234*s,5*s,6*s);
+    }
+    // Medals
+    ['#d4aa12','#c0c0c0','#b87333'].forEach((mc,mi)=>{
+        const mx=cx-62*s+mi*24*s, my=py+275*s;
+        CTX.fillStyle='rgba(180,20,20,0.7)'; CTX.fillRect(mx-5*s,my-15*s,10*s,14*s);
+        CTX.fillStyle=mc;
+        CTX.beginPath(); CTX.arc(mx,my,7*s,0,Math.PI*2); CTX.fill();
+        CTX.strokeStyle='rgba(0,0,0,0.4)'; CTX.lineWidth=1;
+        CTX.beginPath(); CTX.arc(mx,my,7*s,0,Math.PI*2); CTX.stroke();
+    });
+    // Neck
+    CTX.fillStyle='#b87a62'; CTX.fillRect(cx-13*s,py+208*s,26*s,18*s);
+    // Head shape
+    CTX.fillStyle='#c0856a';
+    CTX.beginPath(); CTX.ellipse(cx,py+165*s,52*s,62*s,0,0,Math.PI*2); CTX.fill();
+    // Jaw shadow
+    CTX.fillStyle='rgba(0,0,0,0.14)';
+    CTX.beginPath(); CTX.ellipse(cx,py+198*s,40*s,24*s,0,0,Math.PI); CTX.fill();
+    // Stubble beard
+    CTX.fillStyle='#7a5a48';
+    CTX.beginPath(); CTX.ellipse(cx,py+192*s,28*s,13*s,0,0,Math.PI); CTX.fill();
+    // Ears
+    CTX.fillStyle='#b87a62';
+    CTX.beginPath(); CTX.ellipse(cx-52*s,py+168*s,8*s,11*s,0,0,Math.PI*2); CTX.fill();
+    CTX.beginPath(); CTX.ellipse(cx+52*s,py+168*s,8*s,11*s,0,0,Math.PI*2); CTX.fill();
+    // Short dark hair w/ gray
+    CTX.fillStyle='#201818';
+    CTX.beginPath(); CTX.ellipse(cx,py+120*s,54*s,28*s,0,0,Math.PI); CTX.fill();
+    CTX.fillStyle='rgba(190,185,180,0.28)';
+    CTX.fillRect(cx-46*s,py+112*s,9*s,26*s); CTX.fillRect(cx+38*s,py+112*s,8*s,24*s);
+    // Furrowed brows
+    CTX.fillStyle='#2e1e10';
+    CTX.beginPath(); CTX.moveTo(cx-34*s,py+148*s); CTX.lineTo(cx-10*s,py+151*s); CTX.lineTo(cx-10*s,py+154*s); CTX.lineTo(cx-34*s,py+152*s); CTX.fill();
+    CTX.beginPath(); CTX.moveTo(cx+10*s,py+151*s); CTX.lineTo(cx+34*s,py+148*s); CTX.lineTo(cx+34*s,py+152*s); CTX.lineTo(cx+10*s,py+154*s); CTX.fill();
+    // Eye sockets
+    CTX.fillStyle='#18182a';
+    CTX.fillRect(cx-32*s,py+154*s,22*s,14*s); CTX.fillRect(cx+10*s,py+154*s,22*s,14*s);
+    // Irises
+    CTX.fillStyle='#3a5070';
+    CTX.fillRect(cx-29*s,py+157*s,16*s,8*s); CTX.fillRect(cx+13*s,py+157*s,16*s,8*s);
+    // Pupils
+    CTX.fillStyle='#0a0a18';
+    CTX.fillRect(cx-24*s,py+158*s,6*s,6*s); CTX.fillRect(cx+18*s,py+158*s,6*s,6*s);
+    // Glints
+    CTX.fillStyle='#fff';
+    CTX.fillRect(cx-23*s,py+159*s,3*s,2*s); CTX.fillRect(cx+19*s,py+159*s,3*s,2*s);
+    // Nose
+    CTX.fillStyle='rgba(0,0,0,0.18)'; CTX.fillRect(cx-4*s,py+172*s,8*s,15*s);
+    CTX.fillStyle='#a86e55';
+    CTX.fillRect(cx-8*s,py+183*s,6*s,5*s); CTX.fillRect(cx+2*s,py+183*s,6*s,5*s);
+    // Stern mouth
+    CTX.fillStyle='#8a5040';
+    CTX.fillRect(cx-15*s,py+194*s,30*s,4*s);
+    CTX.fillStyle='#6a3828'; CTX.fillRect(cx-15*s,py+194*s,30*s,2*s);
+    // Captain's hat brim
+    CTX.fillStyle='#141e34'; CTX.fillRect(cx-68*s,py+122*s,136*s,11*s);
+    // Hat body
+    CTX.fillStyle='#0d1428';
+    CTX.beginPath();
+    CTX.moveTo(cx-60*s,py+126*s); CTX.lineTo(cx+60*s,py+126*s);
+    CTX.lineTo(cx+50*s,py+108*s); CTX.lineTo(cx,py+98*s);
+    CTX.lineTo(cx-50*s,py+108*s); CTX.closePath(); CTX.fill();
+    CTX.beginPath(); CTX.ellipse(cx,py+100*s,50*s,18*s,0,0,Math.PI*2); CTX.fill();
+    // Gold hat band
+    CTX.fillStyle='#d4aa12'; CTX.fillRect(cx-60*s,py+123*s,120*s,4*s);
+    // Hat badge
+    CTX.shadowColor='#d4aa12'; CTX.shadowBlur=4;
+    CTX.fillStyle='#e8c020';
+    CTX.beginPath(); CTX.arc(cx,py+112*s,9*s,0,Math.PI*2); CTX.fill();
+    CTX.fillStyle='#0d1428'; CTX.beginPath(); CTX.arc(cx,py+112*s,4*s,0,Math.PI*2); CTX.fill();
+    CTX.shadowBlur=0;
+}
+
+function _csDrawKlaudiaFallback(px, py, pw, ph) {
+    const g=CTX.createLinearGradient(px,py,px+pw,py+ph);
+    g.addColorStop(0,'#060e20'); g.addColorStop(1,'#030810');
+    CTX.fillStyle=g; CTX.fillRect(px,py,pw,ph);
+    const cx=px+pw/2, s=pw/280;
+    // Body/uniform (white with cyan)
+    CTX.fillStyle='#dce8f8';
+    CTX.beginPath();
+    CTX.moveTo(cx-84*s,py+ph); CTX.lineTo(cx-98*s,py+262*s);
+    CTX.lineTo(cx-50*s,py+232*s); CTX.lineTo(cx,py+226*s);
+    CTX.lineTo(cx+50*s,py+232*s); CTX.lineTo(cx+98*s,py+262*s);
+    CTX.lineTo(cx+84*s,py+ph); CTX.fill();
+    CTX.fillStyle='#00aacc';
+    CTX.fillRect(cx-98*s,py+242*s,15*s,55*s); CTX.fillRect(cx+83*s,py+242*s,15*s,55*s);
+    CTX.fillRect(cx-7*s,py+226*s,14*s,75*s);
+    // AI badge glow
+    const hp=Math.sin(CS.blink*0.06)*0.5+0.5;
+    CTX.shadowColor=`rgba(0,${150+Math.round(hp*105)},255,0.9)`; CTX.shadowBlur=10;
+    CTX.fillStyle=`rgba(0,${150+Math.round(hp*105)},255,0.75)`;
+    CTX.beginPath(); CTX.arc(cx-40*s,py+268*s,11*s,0,Math.PI*2); CTX.fill();
+    CTX.shadowBlur=0;
+    CTX.fillStyle='rgba(0,0,0,0.5)';
+    for(let l=0;l<3;l++) CTX.fillRect(cx-48*s,py+263*s+l*7*s,17*s,3*s);
+    // Neck
+    CTX.fillStyle='#f0d8c8'; CTX.fillRect(cx-11*s,py+212*s,22*s,22*s);
+    // Head
+    CTX.fillStyle='#f0d8c8';
+    CTX.beginPath(); CTX.ellipse(cx,py+170*s,45*s,57*s,0,0,Math.PI*2); CTX.fill();
+    // Teal hair
+    CTX.fillStyle='#00b4c4';
+    CTX.beginPath(); CTX.moveTo(cx-49*s,py+132*s);
+    CTX.quadraticCurveTo(cx-78*s,py+185*s,cx-68*s,py+272*s);
+    CTX.lineTo(cx-48*s,py+272*s);
+    CTX.quadraticCurveTo(cx-66*s,py+185*s,cx-28*s,py+132*s); CTX.fill();
+    CTX.beginPath(); CTX.moveTo(cx+49*s,py+132*s);
+    CTX.quadraticCurveTo(cx+78*s,py+185*s,cx+68*s,py+272*s);
+    CTX.lineTo(cx+48*s,py+272*s);
+    CTX.quadraticCurveTo(cx+66*s,py+185*s,cx+28*s,py+132*s); CTX.fill();
+    CTX.beginPath(); CTX.ellipse(cx,py+132*s,50*s,22*s,0,0,Math.PI); CTX.fill();
+    CTX.fillStyle='#40d4e4';
+    CTX.beginPath(); CTX.moveTo(cx-8*s,py+112*s);
+    CTX.quadraticCurveTo(cx-18*s,py+165*s,cx-14*s,py+210*s);
+    CTX.lineTo(cx-6*s,py+210*s);
+    CTX.quadraticCurveTo(cx-10*s,py+165*s,cx,py+112*s); CTX.fill();
+    // Ears
+    CTX.fillStyle='#f0d8c8';
+    CTX.beginPath(); CTX.ellipse(cx-45*s,py+172*s,7*s,10*s,0,0,Math.PI*2); CTX.fill();
+    CTX.beginPath(); CTX.ellipse(cx+45*s,py+172*s,7*s,10*s,0,0,Math.PI*2); CTX.fill();
+    // Eyes
+    CTX.fillStyle='#18102e';
+    CTX.fillRect(cx-30*s,py+158*s,21*s,13*s); CTX.fillRect(cx+9*s,py+158*s,21*s,13*s);
+    CTX.fillStyle='#00d0ff';
+    CTX.fillRect(cx-28*s,py+160*s,17*s,9*s); CTX.fillRect(cx+11*s,py+160*s,17*s,9*s);
+    CTX.fillStyle='#0040a0';
+    CTX.fillRect(cx-22*s,py+161*s,7*s,7*s); CTX.fillRect(cx+16*s,py+161*s,7*s,7*s);
+    CTX.fillStyle='#fff';
+    CTX.fillRect(cx-21*s,py+162*s,3*s,3*s); CTX.fillRect(cx+17*s,py+162*s,3*s,3*s);
+    // Brows
+    CTX.fillStyle='#008090';
+    CTX.fillRect(cx-31*s,py+153*s,21*s,3*s); CTX.fillRect(cx+10*s,py+153*s,21*s,3*s);
+    // Nose
+    CTX.fillStyle='rgba(0,0,0,0.1)'; CTX.fillRect(cx-4*s,py+174*s,8*s,11*s);
+    // Soft smile
+    CTX.strokeStyle='#c89080'; CTX.lineWidth=2*s;
+    CTX.beginPath(); CTX.arc(cx,py+193*s,12*s,0.25,Math.PI-0.25); CTX.stroke();
+    // Teal ambient glow
+    const grd=CTX.createRadialGradient(cx,py+200*s,20*s,cx,py+200*s,200*s);
+    grd.addColorStop(0,'rgba(0,180,220,0)'); grd.addColorStop(1,'rgba(0,100,150,0.14)');
+    CTX.fillStyle=grd; CTX.fillRect(px,py,pw,ph);
+}
+
+function _csPortrait(side, img, active, name) {
+    const PW=290, PH=440, px=side==='left'?30:1150-290-30, py=490-440;
+    CTX.save();
+    if (!active) CTX.filter='brightness(0.28) grayscale(55%)';
+    CTX.fillStyle='#04080e'; CTX.fillRect(px,py,PW,PH);
+    if (img && img.complete && img.naturalWidth>0) {
+        CTX.drawImage(img,px,py,PW,PH);
+    } else {
+        if (side==='left') _csDrawKlaudiaFallback(px,py,PW,PH);
+        else               _csDrawCommodore(px,py,PW,PH);
+    }
+    if (active) for(let sy=py;sy<py+PH;sy+=3){ CTX.fillStyle='rgba(0,0,0,0.07)'; CTX.fillRect(px,sy,PW,1); }
+    CTX.restore();
+    CTX.shadowColor=active?'#00ccff':'transparent'; CTX.shadowBlur=active?18:0;
+    CTX.strokeStyle=active?'#00ccff':'#0a1a2a'; CTX.lineWidth=active?2.5:1;
+    CTX.strokeRect(px,py,PW,PH); CTX.shadowBlur=0;
+    // Name plate above portrait
+    const nw=210, nh=22, nx=side==='left'?px:px+PW-nw;
+    CTX.fillStyle='#020a18'; CTX.fillRect(nx,py-nh-1,nw,nh);
+    if(active){ CTX.shadowColor='#00aaff'; CTX.shadowBlur=10; CTX.fillStyle='#00eeff'; }
+    else CTX.fillStyle='#0d2535';
+    CTX.strokeStyle=active?'#0055aa':'#0a1a28'; CTX.lineWidth=1;
+    CTX.strokeRect(nx,py-nh-1,nw,nh);
+    CTX.font='bold 8px "Press Start 2P"'; CTX.textAlign='center';
+    CTX.fillText(name, nx+nw/2, py-6); CTX.shadowBlur=0;
+}
+
+function _csWrap(text, x, y, maxW, lh) {
+    const words=text.split(' '); let line='', row=0;
+    words.forEach(w=>{
+        const t=line+(line?' ':'')+w;
+        if(CTX.measureText(t).width>maxW&&line){ CTX.fillText(line,x,y+row*lh); line=w; row++; }
+        else line=t;
+    });
+    CTX.fillText(line,x,y+row*lh);
+}
+
+function _csDraw() {
+    CS.blink++;
+    const cur=DIALOGUE_SCRIPT[CS.line], lA=cur.side==='left';
+    // Background + stars
+    CTX.fillStyle='#020508'; CTX.fillRect(0,0,1150,650);
+    STARS.forEach(s=>{
+        const tw=0.35+Math.sin(s.twinkle+CS.blink*0.014)*0.3;
+        CTX.fillStyle=`rgba(175,195,255,${s.brightness*tw})`; CTX.fillRect(s.x,s.y,s.size,s.size);
+    });
+    const vig=CTX.createRadialGradient(575,325,180,575,325,660);
+    vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(1,'rgba(0,0,0,0.65)');
+    CTX.fillStyle=vig; CTX.fillRect(0,0,1150,650);
+    // Portraits
+    _csPortrait('left', CS.klImg, lA, 'KLAUDIA');
+    _csPortrait('right',CS.cmImg,!lA,'COMMODORE');
+    // Dialogue box
+    CTX.fillStyle='rgba(1,4,12,0.97)'; CTX.fillRect(0,490,1150,160);
+    CTX.fillStyle='#00aaee'; CTX.fillRect(0,490,1150,2);
+    CTX.fillStyle='rgba(0,70,140,0.25)'; CTX.fillRect(0,492,1150,3);
+    CTX.shadowColor='#003366'; CTX.shadowBlur=16;
+    CTX.strokeStyle='#003d77'; CTX.lineWidth=1.5; CTX.strokeRect(1,491,1148,158);
+    CTX.shadowBlur=0;
+    // Speaker nameplate
+    const npW=240,npH=24,npX=lA?18:1150-258;
+    CTX.fillStyle='#020c1e'; CTX.fillRect(npX,467,npW,npH);
+    CTX.shadowColor='#0055bb'; CTX.shadowBlur=8;
+    CTX.strokeStyle='#004499'; CTX.lineWidth=1.5; CTX.strokeRect(npX,467,npW,npH);
+    CTX.shadowBlur=0;
+    CTX.fillStyle='#00ddff'; CTX.font='bold 9px "Press Start 2P"';
+    CTX.textAlign='center'; CTX.fillText(cur.speaker,npX+npW/2,483);
+    // Typewriter text
+    const shown=cur.text.slice(0,CS.chars);
+    CTX.fillStyle='#b8dcf6'; CTX.font='9px "Press Start 2P"'; CTX.textAlign='left';
+    _csWrap(shown,180,518,790,20);
+    // Cursor
+    if(CS.chars<cur.text.length){
+        if(CS.blink%18<9){ CTX.fillStyle='#00ccff'; CTX.fillRect(182+Math.min(CTX.measureText(shown).width,789),507,2,13); }
+        CS.timer++;
+        if(CS.timer>=CS.speed){ CS.timer=0; CS.chars++;
+            if('.,!?—'.includes(cur.text[CS.chars-1])) CS.timer=-8; }
+    } else {
+        if(Math.sin(CS.blink*0.08)>0){
+            CTX.shadowColor='#ffcc00'; CTX.shadowBlur=6;
+            CTX.fillStyle='#ffcc00'; CTX.font='7px "Press Start 2P"';
+            CTX.textAlign='right'; CTX.fillText('SPACE / CLICK  ▶',1130,636);
+            CTX.shadowBlur=0;
+        }
+    }
+}
+
+function cutsceneLoop() {
+    if (!CS.active) return;
+    _csDraw();
+    requestAnimationFrame(cutsceneLoop);
+}
+
+function init() {
+    window.addEventListener('keydown', e=>{
+        const k=e.key.toLowerCase();
+        keys[k]=true;
+        if (CS.active) { if(e.key===' '||e.key==='Enter') _csAdvance(); return; }
+        if (instructionsActive) {
+            if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)) {
+                instructionsActive=false;
+                GAME_STATE.totalTimeStart=Date.now();
+            }
+            return;
+        }
+        if ((e.key==='e'||e.key==='E')&&nearHotspot) interact();
+    });
+    window.addEventListener('keyup', e=>{ if(!CS.active) keys[e.key.toLowerCase()]=false; });
+    CANVAS.addEventListener('click',()=>{
+        if (CS.active) { _csAdvance(); return; }
+        if (nearHotspot) interact();
+    });
+    document.getElementById('klaudia-face').style.backgroundImage="url('https://i.imgur.com/bPGngvn.png')";
+    localStorage.removeItem('kubestanut-save');
+    localStorage.removeItem('kubestanut-no-klaudia-time');
+    applyScenarioUI();
+    const btn = document.getElementById('klaudia-ask-btn');
+    if (btn) { btn.disabled=true; btn.style.opacity='0.3'; btn.style.cursor='not-allowed'; btn.textContent='KLAUDIA: OFFLINE'; }
+    document.getElementById('klaudia-box').style.visibility='hidden';
+    _csLoad();
+    cutsceneLoop();
+}
+window.onload=init;
+</script>
+</body>
+</html>
