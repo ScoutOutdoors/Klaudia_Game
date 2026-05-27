@@ -199,6 +199,9 @@
     <div class="modal-content">
         <h2 style="color:#00ccff;text-align:center;text-shadow:0 0 15px #0077ff;font-size:14px;margin-bottom:2px;">KOMODOR • SS KOMODOR CLUSTER</h2>
         <div style="text-align:center;color:#223344;font-size:9px;margin-bottom:12px;">NAMESPACE: ss-komodor-prod | CONTEXT: vanguard-k8s-01</div>
+        <div style="background:linear-gradient(90deg,#0a1a08 0%,#060e04 100%);border:1px solid #336622;border-left:3px solid #88ff44;padding:8px 12px;margin-bottom:12px;text-align:center;">
+            <span style="font-size:7px;color:#88ff44;letter-spacing:2px;">▸ MISSION: IDENTIFY THE LOGS WHERE THE INCIDENT STARTED TO COMPLETE THE RCA</span>
+        </div>
         <div id="log-container"></div>
         <div style="text-align:center;margin-top:14px;">
             <button onclick="submitRCA()" id="rca-submit-btn" disabled>→ CONFIRM RCA</button>
@@ -305,6 +308,23 @@
     <div style="font-size:8px;color:#ffffff;letter-spacing:1px;line-height:1.8;">
         Return to <span style="color:#00ccff;">MAIN COMPUTER</span><br>
         <span style="font-size:6px;color:#446655;letter-spacing:2px;">to restart the cluster</span>
+    </div>
+</div>
+
+<!-- RCA complete pop-down toast -->
+<div id="rca-complete-toast" style="
+    display:none; position:fixed; top:-80px; left:50%; transform:translateX(-50%);
+    z-index:4000; pointer-events:none;
+    background:linear-gradient(180deg,#0a1a2a 0%,#040d18 100%);
+    border:2px solid #00ccff; border-bottom:2px solid #0077ff;
+    padding:14px 28px; text-align:center; min-width:360px;
+    box-shadow:0 0 40px rgba(0,150,255,0.4),0 0 80px rgba(0,100,200,0.15);
+    font-family:'Press Start 2P',system-ui;
+    transition:top 0.4s cubic-bezier(0.22,1,0.36,1);">
+    <div style="font-size:7px;color:#00ccff;letter-spacing:2px;margin-bottom:6px;">✓ RCA COMPLETE</div>
+    <div style="font-size:8px;color:#ffffff;letter-spacing:1px;line-height:1.8;">
+        Proceed to the <span style="color:#ffaa00;">BROKEN TERMINAL</span><br>
+        <span style="font-size:6px;color:#334455;letter-spacing:2px;">to complete the troubleshoot</span>
     </div>
 </div>
 
@@ -2649,6 +2669,22 @@ function submitRCA() {
     document.getElementById('phase-label').style.color='#ff7733';
     saveGameState();
     if (GAME_STATE.klaudiaActive) updateKlaudiaContext();
+    const t = document.getElementById('rca-complete-toast');
+    t.style.display = 'block';
+    t.style.transition = 'none';
+    t.style.top = '-80px';
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            t.style.transition = 'top 0.4s cubic-bezier(0.22,1,0.36,1)';
+            t.style.top = '24px';
+        });
+    });
+    clearTimeout(t._hideTimer);
+    t._hideTimer = setTimeout(() => {
+        t.style.transition = 'top 0.5s ease-in, opacity 0.5s ease';
+        t.style.top = '-80px';
+        setTimeout(() => { t.style.display = 'none'; }, 500);
+    }, 4000);
 }
 
 // ── Troubleshoot: 4 options ───────────────────────────────────────
