@@ -2860,9 +2860,10 @@ async function saveScoreAndShowLeaderboard() {
         'Authorization': `Bearer ${SUPABASE_KEY}`
     };
 
-    // POST lead, then fetch both leaderboard columns in parallel
+    // POST lead to Supabase
+    let postStatus = 'not attempted';
     try {
-        await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+        const postRes = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
             method: 'POST',
             headers: { ...sbHeaders, 'Prefer': 'return=minimal' },
             body: JSON.stringify({
@@ -2874,7 +2875,15 @@ async function saveScoreAndShowLeaderboard() {
                 klaudia_time: time
             })
         });
-    } catch (_) {}
+        postStatus = postRes.ok ? `ok(${postRes.status})` : `err(${postRes.status})`;
+        if (!postRes.ok) {
+            const body = await postRes.text();
+            console.error('Supabase POST failed', postRes.status, body);
+        }
+    } catch (e) {
+        postStatus = `throw(${e.message})`;
+        console.error('Supabase POST threw', e);
+    }
 
     const toRows = (data, timeCol) =>
         (Array.isArray(data) ? data : [])
@@ -2882,24 +2891,53 @@ async function saveScoreAndShowLeaderboard() {
             .map(r => ({ name: r.callsign, time: r[timeCol] }));
 
     let soloScores = [], klaudiaScores = [];
+    let soloSrc = 'ls', klaudiaSrc = 'ls';
+
+    // Fetch solo leaderboard
     try {
-        const [soloRes, klaudiaRes] = await Promise.all([
-            fetch(`${SUPABASE_URL}/rest/v1/leads?select=callsign,solo_time&solo_time=not.is.null&order=solo_time.asc&limit=10`, { headers: sbHeaders }),
-            fetch(`${SUPABASE_URL}/rest/v1/leads?select=callsign,klaudia_time&klaudia_time=not.is.null&order=klaudia_time.asc&limit=10`, { headers: sbHeaders })
-        ]);
-        if (!soloRes.ok || !klaudiaRes.ok) throw new Error('Supabase fetch failed');
-        soloScores    = toRows(await soloRes.json(),    'solo_time');
-        klaudiaScores = toRows(await klaudiaRes.json(), 'klaudia_time');
-    } catch (_) {
-        // Fall back to localStorage if Supabase is unreachable or returns an error
-        soloScores    = JSON.parse(localStorage.getItem('kubestanut-lb-solo')    || '[]');
-        klaudiaScores = JSON.parse(localStorage.getItem('kubestanut-lb-klaudia') || '[]');
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=callsign,solo_time&solo_time=not.is.null&order=solo_time.asc&limit=10`, { headers: sbHeaders });
+        if (res.ok) {
+            soloScores = toRows(await res.json(), 'solo_time');
+            soloSrc = `sb(${soloScores.length})`;
+        } else {
+            const body = await res.text();
+            console.error('Supabase solo GET failed', res.status, body);
+            soloSrc = `sb-err(${res.status})`;
+        }
+    } catch (e) {
+        console.error('Supabase solo GET threw', e);
+        soloSrc = `throw`;
+    }
+    if (soloSrc.startsWith('sb-err') || soloSrc === 'throw' || soloScores.length === 0) {
+        const ls = JSON.parse(localStorage.getItem('kubestanut-lb-solo') || '[]');
+        if (ls.length > 0) { soloScores = ls; soloSrc += '+ls'; }
     }
 
-    lb.innerHTML = buildLeaderboardHTML(name, time, p1Time, soloScores, klaudiaScores);
+    // Fetch Klaudia leaderboard
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=callsign,klaudia_time&klaudia_time=not.is.null&order=klaudia_time.asc&limit=10`, { headers: sbHeaders });
+        if (res.ok) {
+            klaudiaScores = toRows(await res.json(), 'klaudia_time');
+            klaudiaSrc = `sb(${klaudiaScores.length})`;
+        } else {
+            const body = await res.text();
+            console.error('Supabase klaudia GET failed', res.status, body);
+            klaudiaSrc = `sb-err(${res.status})`;
+        }
+    } catch (e) {
+        console.error('Supabase klaudia GET threw', e);
+        klaudiaSrc = `throw`;
+    }
+    if (klaudiaSrc.startsWith('sb-err') || klaudiaSrc === 'throw' || klaudiaScores.length === 0) {
+        const ls = JSON.parse(localStorage.getItem('kubestanut-lb-klaudia') || '[]');
+        if (ls.length > 0) { klaudiaScores = ls; klaudiaSrc += '+ls'; }
+    }
+
+    console.log(`[LB] p1Time=${p1Time} post=${postStatus} solo=${soloSrc} klaudia=${klaudiaSrc}`);
+    lb.innerHTML = buildLeaderboardHTML(name, time, p1Time, soloScores, klaudiaScores, {postStatus, soloSrc, klaudiaSrc});
 }
 
-function buildLeaderboardHTML(highlightName, highlightKlaudiaTime, highlightSoloTime, soloScores, klaudiaScores) {
+function buildLeaderboardHTML(highlightName, highlightKlaudiaTime, highlightSoloTime, soloScores, klaudiaScores, dbg) {
     const fmt = s => `${Math.floor(s.time/60).toString().padStart(2,'0')}:${(s.time%60).toString().padStart(2,'0')}`;
     const medals = ['🥇','🥈','🥉'];
 
@@ -2934,6 +2972,11 @@ function buildLeaderboardHTML(highlightName, highlightKlaudiaTime, highlightSolo
     let html = `<div style="color:#00ccff;font-size:8px;text-align:center;
         border-top:2px solid #003366;padding:10px 0 10px;letter-spacing:2px;margin-bottom:8px;">
         LEADERBOARD</div>`;
+    if (dbg) {
+        html += `<div style="font-family:monospace;font-size:5px;color:#334455;text-align:center;padding-bottom:6px;">
+            solo_time=${highlightSoloTime??'null'} | post:${dbg.postStatus} | solo:${dbg.soloSrc} | klaudia:${dbg.klaudiaSrc}
+        </div>`;
+    }
     html += `<div style="display:flex;gap:10px;align-items:flex-start;">`;
     html += col(soloScores,  '— WITHOUT KLAUDIA —', highlightSoloTime);
     html += `<div style="width:1px;background:#112233;align-self:stretch;flex-shrink:0;"></div>`;
