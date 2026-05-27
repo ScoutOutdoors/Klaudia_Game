@@ -292,6 +292,22 @@
     </div>
 </div>
 
+<!-- Remedy hint toast -->
+<div id="remedy-hint-toast" style="
+    display:none; position:fixed; bottom:36px; left:50%; transform:translateX(-50%);
+    z-index:4000; pointer-events:none;
+    background:linear-gradient(180deg,#041a0c 0%,#020a05 100%);
+    border:2px solid #00ff88; border-top:2px solid #00ffcc;
+    padding:14px 28px; text-align:center;
+    box-shadow:0 0 40px rgba(0,255,100,0.4),0 0 80px rgba(0,200,80,0.15);
+    font-family:'Press Start 2P',system-ui;">
+    <div style="font-size:7px;color:#00ff88;letter-spacing:2px;margin-bottom:6px;">✓ FIX APPLIED</div>
+    <div style="font-size:8px;color:#ffffff;letter-spacing:1px;line-height:1.8;">
+        Return to <span style="color:#00ccff;">MAIN COMPUTER</span><br>
+        <span style="font-size:6px;color:#446655;letter-spacing:2px;">to restart the cluster</span>
+    </div>
+</div>
+
 <!-- Second-run Klaudia online popup -->
 <div id="klaudia-second-run-modal" style="display:none;position:fixed;inset:0;z-index:3100;
     background:rgba(1,3,12,0.96);align-items:center;justify-content:center;flex-direction:column;
@@ -2709,6 +2725,21 @@ function completeTroubleshoot() {
     document.getElementById('phase-label').style.color='#00ffcc';
     saveGameState();
     if (GAME_STATE.klaudiaActive) updateKlaudiaContext();
+    showRemedyHint();
+}
+
+function showRemedyHint() {
+    const toast = document.getElementById('remedy-hint-toast');
+    if (!toast) return;
+    toast.style.display = 'block';
+    toast.style.opacity = '1';
+    toast.style.transition = 'none';
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => {
+        toast.style.transition = 'opacity 1s ease';
+        toast.style.opacity = '0';
+        setTimeout(() => { toast.style.display = 'none'; }, 1000);
+    }, 4000);
 }
 
 // ── Win ───────────────────────────────────────────────────────────
