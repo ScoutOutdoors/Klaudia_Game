@@ -2836,6 +2836,19 @@ async function saveScoreAndShowLeaderboard() {
     });
     localStorage.setItem('kubestanut-leads', JSON.stringify(leads));
 
+    // Write scores to localStorage so the fallback works even if Supabase GETs fail
+    const lsKlaudia = JSON.parse(localStorage.getItem('kubestanut-lb-klaudia') || '[]');
+    lsKlaudia.push({ name, time });
+    lsKlaudia.sort((a, b) => a.time - b.time);
+    localStorage.setItem('kubestanut-lb-klaudia', JSON.stringify(lsKlaudia.slice(0, 10)));
+
+    if (p1Time > 0) {
+        const lsSolo = JSON.parse(localStorage.getItem('kubestanut-lb-solo') || '[]');
+        lsSolo.push({ name, time: p1Time });
+        lsSolo.sort((a, b) => a.time - b.time);
+        localStorage.setItem('kubestanut-lb-solo', JSON.stringify(lsSolo.slice(0, 10)));
+    }
+
     document.getElementById('save-section').style.display = 'none';
     const lb = document.getElementById('leaderboard');
     lb.style.display = 'block';
@@ -2864,7 +2877,7 @@ async function saveScoreAndShowLeaderboard() {
     } catch (_) {}
 
     const toRows = (data, timeCol) =>
-        (data || [])
+        (Array.isArray(data) ? data : [])
             .filter(r => r[timeCol] != null)
             .map(r => ({ name: r.callsign, time: r[timeCol] }));
 
@@ -2874,10 +2887,11 @@ async function saveScoreAndShowLeaderboard() {
             fetch(`${SUPABASE_URL}/rest/v1/leads?select=callsign,solo_time&solo_time=not.is.null&order=solo_time.asc&limit=10`, { headers: sbHeaders }),
             fetch(`${SUPABASE_URL}/rest/v1/leads?select=callsign,klaudia_time&klaudia_time=not.is.null&order=klaudia_time.asc&limit=10`, { headers: sbHeaders })
         ]);
+        if (!soloRes.ok || !klaudiaRes.ok) throw new Error('Supabase fetch failed');
         soloScores    = toRows(await soloRes.json(),    'solo_time');
         klaudiaScores = toRows(await klaudiaRes.json(), 'klaudia_time');
     } catch (_) {
-        // Fall back to localStorage if offline
+        // Fall back to localStorage if Supabase is unreachable or returns an error
         soloScores    = JSON.parse(localStorage.getItem('kubestanut-lb-solo')    || '[]');
         klaudiaScores = JSON.parse(localStorage.getItem('kubestanut-lb-klaudia') || '[]');
     }
